@@ -1,0 +1,11 @@
+_internal_label
+1_metric_total
+9_server_errors
+http-requests-total
+api-latency
+http requests total
+metric name
+http.requests.total
+metric@name
+metric#count
+$metric_name

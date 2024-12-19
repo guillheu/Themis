@@ -1,0 +1,12 @@
+2xx_status
+404_errors
+status:code
+http:method
+status-code
+api-version
+status code
+error type
+status.code
+error@type
+region#west
+$datacenter

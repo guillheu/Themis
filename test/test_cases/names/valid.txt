@@ -1,0 +1,10 @@
+http_requests_total
+api_http_requests_total
+prometheus_tsdb_blocks_loaded
+node_cpu_seconds_total
+my_app_processed_ops_total
+internal_metric
+node_memory_usage
+HTTPRequestsTotal
+Api_Requests_Count
+node:memory_usage:bytes
