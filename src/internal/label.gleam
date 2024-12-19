@@ -17,6 +17,18 @@ pub type LabelError {
   InvalidLabelName
 }
 
+pub fn from_dict(
+  labels labels: Dict(String, String),
+) -> Result(LabelSet, LabelError) {
+  let r = {
+    use #(name_string, value) <- list.try_map(dict.to_list(labels))
+    use name <- result.try(new_label_name(name_string))
+    Ok(#(name, value))
+  }
+  use checked_dict <- result.map(r)
+  LabelSet(dict.from_list(checked_dict))
+}
+
 pub fn new() -> LabelSet {
   LabelSet(dict.new())
 }

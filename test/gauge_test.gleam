@@ -1,24 +1,22 @@
 import gleam/dict
 import gleeunit/should
+import internal/label
+import internal/metric
+import internal/metric/gauge
 import internal/prometheus
-import themis/label
-import themis/metric
-import themis/metric/gauge
 
 pub fn create_test() {
   let expected = make_test_gauge(with_record: False)
 
-  gauge.new("a_gauge", "A simple gauge for testing")
-  |> should.be_ok
+  gauge.new("A simple gauge for testing")
   |> should.equal(expected)
 }
 
 pub fn update_test() {
   let expected = make_test_gauge(with_record: True)
 
-  gauge.new("a_gauge", "A simple gauge for testing")
-  |> should.be_ok
-  |> gauge.add_record(
+  gauge.new("A simple gauge for testing")
+  |> gauge.insert_record(
     label.new() |> label.add_label("foo", "bar") |> should.be_ok,
     prometheus.Int(10),
   )
@@ -38,15 +36,15 @@ pub fn delete_test() {
 
 pub fn to_string_test() {
   make_test_gauge(with_record: False)
-  |> gauge.print
+  |> gauge.print("my_gauge" |> metric.new_name |> should.be_ok)
   |> should.equal(
-    "HELP a_gauge A simple gauge for testing\nTYPE a_gauge gauge\n",
+    "HELP my_gauge A simple gauge for testing\nTYPE my_gauge gauge\n",
   )
 
   make_test_gauge(with_record: True)
-  |> gauge.print
+  |> gauge.print("my_gauge" |> metric.new_name |> should.be_ok)
   |> should.equal(
-    "HELP a_gauge A simple gauge for testing\nTYPE a_gauge gauge\na_gauge{foo=\"bar\"} 10\n",
+    "HELP my_gauge A simple gauge for testing\nTYPE my_gauge gauge\nmy_gauge{foo=\"bar\"} 10\n",
   )
 
   let new_record_labels =
@@ -59,10 +57,10 @@ pub fn to_string_test() {
     |> should.be_ok
 
   make_test_gauge(with_record: True)
-  |> gauge.add_record(new_record_labels, prometheus.Int(69))
-  |> gauge.print
+  |> gauge.insert_record(new_record_labels, prometheus.Int(69))
+  |> gauge.print("my_gauge" |> metric.new_name |> should.be_ok)
   |> should.equal(
-    "HELP a_gauge A simple gauge for testing\nTYPE a_gauge gauge\na_gauge{foo=\"bar\"} 10\na_gauge{foo=\"bar\",toto=\"tata\",wibble=\"wobble\"} 69\n",
+    "HELP my_gauge A simple gauge for testing\nTYPE my_gauge gauge\nmy_gauge{foo=\"bar\"} 10\nmy_gauge{foo=\"bar\",toto=\"tata\",wibble=\"wobble\"} 69\n",
   )
 }
 
@@ -76,9 +74,5 @@ fn make_test_gauge(
       dict.from_list([#(labels, prometheus.Int(10))])
     }
   }
-  metric.Metric(
-    metric.new_name("a_gauge") |> should.be_ok,
-    "A simple gauge for testing",
-    records,
-  )
+  metric.Metric("A simple gauge for testing", records)
 }

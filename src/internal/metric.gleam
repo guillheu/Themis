@@ -1,6 +1,6 @@
 import gleam/dict.{type Dict}
+import internal/label
 import internal/prometheus
-import themis/label
 
 pub type MetricError {
   InvalidMetricName
@@ -12,7 +12,7 @@ pub opaque type MetricName {
 
 pub type Metric(kind, record_type) {
   Metric(
-    name: MetricName,
+    // name: MetricName,
     description: String,
     records: Dict(label.LabelSet, record_type),
   )

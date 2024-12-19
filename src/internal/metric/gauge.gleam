@@ -1,22 +1,17 @@
 import gleam/dict
 import gleam/list
-import gleam/result
 import gleam/string_tree
+import internal/label.{type LabelSet}
+import internal/metric.{type Metric, Metric}
 import internal/prometheus.{type Number}
-import themis/label.{type LabelSet}
-import themis/metric.{type Metric, type MetricError, Metric}
 
 pub type Gauge
 
-pub fn new(
-  name name: String,
-  description description: String,
-) -> Result(Metric(Gauge, Number), MetricError) {
-  use metric_name <- result.map(metric.new_name(name))
-  Metric(metric_name, description, dict.new())
+pub fn new(description description: String) -> Metric(Gauge, Number) {
+  Metric(description, dict.new())
 }
 
-pub fn add_record(
+pub fn insert_record(
   to to: Metric(Gauge, Number),
   labels labels: LabelSet,
   value value: Number,
@@ -31,8 +26,11 @@ pub fn delete_record(
   Metric(..from, records: dict.delete(from.records, labels))
 }
 
-pub fn print(metric metric: Metric(Gauge, Number)) -> String {
-  let name = metric.name_to_string(metric.name)
+pub fn print(
+  metric metric: Metric(Gauge, Number),
+  name name: metric.MetricName,
+) -> String {
+  let name = metric.name_to_string(name)
   let help = "HELP " <> name <> " " <> metric.description
   let type_ = "TYPE " <> name <> " gauge"
   {
