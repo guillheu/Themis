@@ -1,0 +1,6 @@
+- exclude keywords from metric names ("gauge", "histogram"...)
+- HELP and TYPE output lines should be preceded by a "#"
+- add `store`, `gauge`, `counter`, `histogram` and `summary` modules to the API
+- implement counter w/ tests
+- implement histogram w/ tests
+- implement summary w/ tests
