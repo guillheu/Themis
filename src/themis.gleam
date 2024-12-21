@@ -6,6 +6,7 @@ import internal/label
 import internal/metric.{type Metric, Metric}
 import internal/metric/counter.{type Counter}
 import internal/metric/gauge.{type Gauge}
+import internal/metric/histogram.{type Histogram, type HistogramRecord}
 import internal/prometheus.{type Number}
 
 /// A Store manages a collection of metrics, ensuring unique metric names.
@@ -13,6 +14,7 @@ pub type Store {
   Store(
     gauges: Dict(metric.MetricName, Metric(Gauge, Number)),
     counters: Dict(metric.MetricName, Metric(Counter, Number)),
+    histograms: Dict(metric.MetricName, Metric(Histogram, HistogramRecord)),
   )
 }
 
@@ -28,11 +30,13 @@ pub type StoreError {
   LabelError(label.LabelError)
   /// Wraps errors related to counters
   CounterError(counter.CounterError)
+  /// Wraps errors related to counters
+  HistogramError(histogram.HistogramError)
 }
 
 /// Creates a new empty metrics store.
 pub fn new() -> Store {
-  Store(gauges: dict.new(), counters: dict.new())
+  Store(gauges: dict.new(), counters: dict.new(), histograms: dict.new())
 }
 
 /// Formats all metrics in the store as a Prometheus-compatible text string.
@@ -47,15 +51,17 @@ pub fn new() -> Store {
 /// // my_metric{toto="tata",wibble="wobble"} +Inf
 /// ```
 pub fn print(metrics_store store: Store) -> String {
-  print_gauges(store.gauges) <> print_counters(store.counters)
+  print_gauges(store.gauges)
+  <> print_counters(store.counters)
+  <> print_histograms(store.histograms)
 }
 
 fn print_gauges(
   gauges: Dict(metric.MetricName, Metric(Gauge, Number)),
 ) -> String {
   {
-    use current, gauge, name <- dict.fold(gauges, [])
-    [gauge.print(name, gauge) <> "\n", ..current]
+    use current, name, gauge <- dict.fold(gauges, [])
+    [gauge.print(gauge, name) <> "\n", ..current]
   }
   |> list.reverse
   |> string_tree.from_strings
@@ -66,8 +72,20 @@ fn print_counters(
   counters: Dict(metric.MetricName, Metric(Counter, Number)),
 ) -> String {
   {
-    use current, counter, name <- dict.fold(counters, [])
-    [counter.print(name, counter) <> "\n", ..current]
+    use current, name, counter <- dict.fold(counters, [])
+    [counter.print(counter, name) <> "\n", ..current]
+  }
+  |> list.reverse
+  |> string_tree.from_strings
+  |> string_tree.to_string
+}
+
+fn print_histograms(
+  histograms: Dict(metric.MetricName, Metric(Histogram, HistogramRecord)),
+) -> String {
+  {
+    use current, counter, name <- dict.fold(histograms, [])
+    [histogram.print(name, counter) <> "\n", ..current]
   }
   |> list.reverse
   |> string_tree.from_strings
@@ -76,5 +94,7 @@ fn print_counters(
 
 pub fn is_metric_name_used(store: Store, name: metric.MetricName) -> Bool {
   use <- bool.guard(dict.has_key(store.gauges, name), True)
+  use <- bool.guard(dict.has_key(store.counters, name), True)
+  use <- bool.guard(dict.has_key(store.histograms, name), True)
   False
 }

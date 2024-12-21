@@ -53,7 +53,7 @@ pub fn to_string_test() {
     "# HELP my_metric A simple gauge for testing\n# TYPE my_metric gauge\nmy_metric{foo=\"bar\"} 10\n",
   )
 
-  let new_record_labels =
+  let create_record_labels =
     label.new()
     |> label.add_label("foo", "bar")
     |> should.be_ok
@@ -63,7 +63,7 @@ pub fn to_string_test() {
     |> should.be_ok
 
   make_test_gauge(with_record: True)
-  |> gauge.insert_record(new_record_labels, prometheus.Int(69))
+  |> gauge.insert_record(create_record_labels, prometheus.Int(69))
   |> gauge.print("my_metric" |> metric.new_name([]) |> should.be_ok)
   |> should.equal(
     "# HELP my_metric A simple gauge for testing\n# TYPE my_metric gauge\nmy_metric{foo=\"bar\"} 10\nmy_metric{foo=\"bar\",toto=\"tata\",wibble=\"wobble\"} 69\n",
