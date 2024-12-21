@@ -94,7 +94,7 @@ pub fn delete_record(
   from from: Metric(Histogram, HistogramRecord),
   labels labels: LabelSet,
 ) -> Metric(Histogram, HistogramRecord) {
-  todo as "histogram.delete_record"
+  Metric(..from, records: dict.delete(from.records, labels))
 }
 
 pub fn print(
