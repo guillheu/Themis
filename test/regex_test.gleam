@@ -1,7 +1,8 @@
 import gleam/list
 import gleam/string
 import gleeunit/should
-import internal/prometheus
+import internal/label
+import internal/metric
 import simplifile
 
 pub fn names_test() {
@@ -12,11 +13,11 @@ pub fn names_test() {
 
   {
     use valid <- list.each(string.split(valid_cases_content, "\n"))
-    prometheus.is_valid_name(valid) |> should.be_true
+    metric.is_valid_name(valid) |> should.be_true
   }
   {
     use invalid <- list.each(string.split(invalid_cases_content, "\n"))
-    prometheus.is_valid_name(invalid) |> should.be_false
+    metric.is_valid_name(invalid) |> should.be_false
   }
 }
 
@@ -28,10 +29,10 @@ pub fn labels_test() {
 
   {
     use valid <- list.each(string.split(valid_cases_content, "\n"))
-    prometheus.is_valid_label(valid) |> should.be_true
+    label.is_valid_label(valid) |> should.be_true
   }
   {
     use invalid <- list.each(string.split(invalid_cases_content, "\n"))
-    prometheus.is_valid_label(invalid) |> should.be_false
+    label.is_valid_label(invalid) |> should.be_false
   }
 }

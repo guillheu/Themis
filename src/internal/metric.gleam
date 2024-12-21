@@ -1,9 +1,9 @@
 import gleam/dict.{type Dict}
 import gleam/list
+import gleam/regexp
 import gleam/result
 import gleam/string
 import internal/label
-import internal/prometheus
 
 pub type MetricError {
   InvalidMetricName
@@ -18,6 +18,16 @@ pub type Metric(kind, record_type) {
   Metric(description: String, records: Dict(label.LabelSet, record_type))
 }
 
+const name_regex_pattern = "^[a-zA-Z][a-zA-Z0-9_:]*$"
+
+pub fn is_valid_name(name: String) -> Bool {
+  let assert Ok(reg) =
+    name_regex_pattern
+    |> regexp.from_string
+  reg
+  |> regexp.check(name)
+}
+
 pub fn new_name(
   from: String,
   blacklist: List(String),
@@ -30,7 +40,7 @@ pub fn new_name(
     }
   }
   use _ <- result.try(r)
-  case prometheus.is_valid_name(from) {
+  case is_valid_name(from) {
     False -> Error(InvalidMetricName)
     True -> Ok(MetricName(from))
   }

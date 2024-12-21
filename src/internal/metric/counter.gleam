@@ -1,14 +1,11 @@
 import gleam/bool
 import gleam/dict
-import gleam/float
-import gleam/int
 import gleam/list
 import gleam/result
 import gleam/string_tree
 import internal/label.{type LabelSet}
 import internal/metric.{type Metric, type MetricError, type MetricName, Metric}
-import internal/prometheus.{type Number, Dec, Int, NaN, NegInf, PosInf}
-import themis/number
+import themis/number.{type Number, Int}
 
 pub type Counter
 
@@ -39,12 +36,7 @@ pub fn create_record(
     dict.has_key(from.records, labels),
     Error(RecordAlreadyExists),
   )
-  Ok(
-    Metric(
-      ..from,
-      records: from.records |> dict.insert(labels, prometheus.Int(0)),
-    ),
-  )
+  Ok(Metric(..from, records: from.records |> dict.insert(labels, Int(0))))
 }
 
 pub fn increment(
@@ -86,7 +78,7 @@ pub fn print(
       help <> "\n" <> type_ <> "\n",
     ])
     [
-      name <> label.print(labels) <> " " <> prometheus.print(value) <> "\n",
+      name <> label.print(labels) <> " " <> number.print(value) <> "\n",
       ..current
     ]
   }

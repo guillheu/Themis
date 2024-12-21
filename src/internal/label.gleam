@@ -1,9 +1,9 @@
 import gleam/dict.{type Dict}
 import gleam/list
+import gleam/regexp
 import gleam/result
 import gleam/string
 import gleam/string_tree
-import internal/prometheus
 
 pub opaque type LabelName {
   LabelName(name: String)
@@ -15,6 +15,16 @@ pub opaque type LabelSet {
 
 pub type LabelError {
   InvalidLabelName
+}
+
+const label_regex_pattern = "^[a-zA-Z][a-zA-Z0-9_]*$"
+
+pub fn is_valid_label(label: String) -> Bool {
+  let assert Ok(reg) =
+    label_regex_pattern
+    |> regexp.from_string
+  reg
+  |> regexp.check(label)
 }
 
 pub fn from_dict(
@@ -63,7 +73,7 @@ pub fn print(labels labels: LabelSet) -> String {
 }
 
 fn new_label_name(from: String) -> Result(LabelName, LabelError) {
-  case prometheus.is_valid_label(from) {
+  case is_valid_label(from) {
     False -> Error(InvalidLabelName)
     True -> Ok(LabelName(from))
   }

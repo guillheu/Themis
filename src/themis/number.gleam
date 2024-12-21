@@ -1,35 +1,42 @@
 import gleam/float
 import gleam/int
 import gleam/order
-import internal/prometheus.{type Number, Dec, Int, NaN, NegInf, PosInf}
 
 pub type ComparisonError {
   NaNValue
 }
 
+pub type Number {
+  PosInf
+  NegInf
+  NaN
+  Dec(Float)
+  Int(Int)
+}
+
 /// Creates a Number representing an integer value.
 pub fn int(value value: Int) -> Number {
-  prometheus.Int(value)
+  Int(value)
 }
 
 /// Creates a Number representing a decimal value.
 pub fn dec(value value: Float) -> Number {
-  prometheus.Dec(value)
+  Dec(value)
 }
 
 /// Creates a Number representing positive infinity.
 pub fn pos_inf() -> Number {
-  prometheus.PosInf
+  PosInf
 }
 
 /// Creates a Number representing negative infinity.
 pub fn neg_inf() -> Number {
-  prometheus.NegInf
+  NegInf
 }
 
 /// Creates a Number representing NaN (Not a Number).
 pub fn nan() -> Number {
-  prometheus.NaN
+  NaN
 }
 
 /// Compare two numbers (see gleam_stdlib/order)
@@ -62,5 +69,15 @@ pub fn add(value1 val1: Number, value2 val2: Number) -> Number {
     PosInf, NegInf | NegInf, PosInf -> NaN
     PosInf, _ | _, PosInf -> PosInf
     NegInf, _ | _, NegInf -> NegInf
+  }
+}
+
+pub fn print(number: Number) -> String {
+  case number {
+    Dec(val) -> float.to_string(val)
+    Int(val) -> int.to_string(val)
+    NaN -> "NaN"
+    NegInf -> "-Inf"
+    PosInf -> "+Inf"
   }
 }

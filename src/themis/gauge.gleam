@@ -3,11 +3,11 @@ import gleam/dict.{type Dict}
 import gleam/result
 import internal/label
 import internal/metric/gauge
-import internal/prometheus.{type Number}
 import themis.{
   type Store, type StoreError, LabelError, MetricError, MetricNameNotFound,
   Store,
 }
+import themis/number.{type Number}
 
 /// Registers a new gauge metric to the store.
 ///

@@ -4,11 +4,11 @@ import gleam/result
 import gleam/set.{type Set}
 import internal/label
 import internal/metric/histogram
-import internal/prometheus.{type Number}
 import themis.{
   type Store, type StoreError, LabelError, MetricError, MetricNameNotFound,
   Store,
 }
+import themis/number.{type Number}
 
 pub fn register(
   store store: Store,

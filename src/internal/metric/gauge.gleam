@@ -4,7 +4,7 @@ import gleam/result
 import gleam/string_tree
 import internal/label.{type LabelSet}
 import internal/metric.{type Metric, type MetricName, Metric}
-import internal/prometheus.{type Number}
+import themis/number.{type Number}
 
 pub type Gauge
 
@@ -49,7 +49,7 @@ pub fn print(
       help <> "\n" <> type_ <> "\n",
     ])
     [
-      name <> label.print(labels) <> " " <> prometheus.print(value) <> "\n",
+      name <> label.print(labels) <> " " <> number.print(value) <> "\n",
       ..current
     ]
   }

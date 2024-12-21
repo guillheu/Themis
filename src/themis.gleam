@@ -7,7 +7,7 @@ import internal/metric.{type Metric, Metric}
 import internal/metric/counter.{type Counter}
 import internal/metric/gauge.{type Gauge}
 import internal/metric/histogram.{type Histogram, type HistogramRecord}
-import internal/prometheus.{type Number}
+import themis/number.{type Number}
 
 /// A Store manages a collection of metrics, ensuring unique metric names.
 pub type Store {

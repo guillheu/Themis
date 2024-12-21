@@ -3,11 +3,11 @@ import gleam/dict.{type Dict}
 import gleam/result
 import internal/label
 import internal/metric/counter
-import internal/prometheus.{type Number}
 import themis.{
   type Store, type StoreError, LabelError, MetricError, MetricNameNotFound,
   Store,
 }
+import themis/number.{type Number}
 
 /// Registers a new counter metric to the store.
 ///

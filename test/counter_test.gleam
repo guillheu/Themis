@@ -4,7 +4,7 @@ import gleeunit/should
 import internal/label
 import internal/metric
 import internal/metric/counter
-import internal/prometheus
+import themis/number
 
 pub fn create_test() {
   let expected = make_test_counter(with_record: False, dec: False)
@@ -42,7 +42,7 @@ pub fn increment_test() {
   metric
   |> counter.create_record(labels)
   |> should.be_ok
-  |> counter.increment_by(labels, prometheus.Dec(1.0))
+  |> counter.increment_by(labels, number.Dec(1.0))
   |> should.be_ok
   |> should.equal(expected)
 
@@ -100,10 +100,10 @@ pub fn to_string_test() {
 fn make_test_counter(
   with_record with_record: Bool,
   dec dec: Bool,
-) -> metric.Metric(counter.Counter, prometheus.Number) {
+) -> metric.Metric(counter.Counter, number.Number) {
   let val = case dec {
-    False -> prometheus.Int(1)
-    True -> prometheus.Dec(1.0)
+    False -> number.Int(1)
+    True -> number.Dec(1.0)
   }
   let records = case with_record {
     False -> dict.new()

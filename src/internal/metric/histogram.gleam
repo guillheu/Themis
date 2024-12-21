@@ -7,8 +7,7 @@ import gleam/set.{type Set}
 import gleam/string_tree
 import internal/label.{type LabelSet}
 import internal/metric.{type Metric, type MetricName, Metric}
-import internal/prometheus.{type Number}
-import themis/number
+import themis/number.{type Number}
 
 pub type Histogram
 
@@ -45,12 +44,12 @@ pub fn create_record(
 ) -> Result(Metric(Histogram, HistogramRecord), HistogramError) {
   let keys =
     thresholds
-    |> set.insert(prometheus.PosInf)
+    |> set.insert(number.PosInf)
     |> set.to_list
   let r = {
     use key <- list.any(keys)
     // histogram bucket `le` values cannot be NaN
-    key == prometheus.NaN
+    key == number.NaN
   }
   use <- bool.guard(r, Error(InvalidNaNLabel))
   let values = list.repeat(number.int(0), list.length(keys))
@@ -125,14 +124,14 @@ fn print_histogram_record(
     <> "_count"
     <> label.print(labels)
     <> " "
-    <> prometheus.print(record.count)
+    <> number.print(record.count)
     <> "\n"
   let sum_line =
     name
     <> "_sum"
     <> label.print(labels)
     <> " "
-    <> prometheus.print(record.count)
+    <> number.print(record.count)
     <> "\n"
   let bucket_lines =
     record.buckets
@@ -160,10 +159,10 @@ fn print_bucket(
   count: Number,
 ) -> String {
   let label_string =
-    label.add_label(labels, "le", prometheus.print(le))
+    label.add_label(labels, "le", number.print(le))
     |> result.lazy_unwrap(fn() { panic as "`le` could not be added as a label" })
     |> label.print
-  name <> "_bucket" <> label_string <> " " <> prometheus.print(count) <> "\n"
+  name <> "_bucket" <> label_string <> " " <> number.print(count) <> "\n"
 }
 
 pub fn new_name(name name: String) -> Result(MetricName, metric.MetricError) {
