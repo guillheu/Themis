@@ -5,8 +5,8 @@ import gleam/order
 import gleam/result
 import gleam/set.{type Set}
 import gleam/string_tree
-import internal/label.{type LabelSet}
-import internal/metric.{type Metric, type MetricName, Metric}
+import themis/internal/label.{type LabelSet}
+import themis/internal/metric.{type Metric, type MetricName, Metric}
 import themis/number.{type Number}
 
 pub type Histogram
@@ -63,9 +63,13 @@ fn new_record(
     |> set.insert(number.PosInf)
     |> set.to_list
 
-  let values = list.repeat(number.int(0), list.length(keys))
+  let values = list.repeat(number.integer(0), list.length(keys))
   let buckets = list.zip(keys, values) |> dict.from_list
-  HistogramRecord(count: number.int(0), sum: number.int(0), buckets: buckets)
+  HistogramRecord(
+    count: number.integer(0),
+    sum: number.integer(0),
+    buckets: buckets,
+  )
 }
 
 pub fn observe(
@@ -75,14 +79,14 @@ pub fn observe(
 ) -> Metric(Histogram, HistogramRecord, Set(Number)) {
   let record = result.unwrap(dict.get(to.records, labels), new_record(to))
   let updated_buckets_list = {
-    // `count` is always initialized as a number.int(0)
+    // `count` is always initialized as a number.integer(0)
     // See init_record
     use #(le, bucket_count) <- list.map(record.buckets |> dict.to_list)
     case number.compare(value, le) {
       Error(_) -> panic as "found NaN bucket boundary"
       Ok(order.Lt) | Ok(order.Eq) -> #(
         le,
-        number.add(bucket_count, number.int(1)),
+        number.add(bucket_count, number.integer(1)),
       )
       Ok(order.Gt) -> #(le, bucket_count)
     }
@@ -92,7 +96,7 @@ pub fn observe(
   let new_record =
     HistogramRecord(
       sum: number.add(record.sum, value),
-      count: number.add(record.count, number.int(1)),
+      count: number.add(record.count, number.integer(1)),
       buckets: updated_buckets,
     )
   Metric(..to, records: dict.insert(to.records, labels, new_record))

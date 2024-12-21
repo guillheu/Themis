@@ -1,8 +1,8 @@
 import gleam/dict
 import gleeunit/should
-import internal/label
-import internal/metric
-import internal/metric/counter
+import themis/internal/label
+import themis/internal/metric
+import themis/internal/metric/counter
 import themis/number
 
 pub fn create_test() {

@@ -2,12 +2,12 @@ import gleam/bool
 import gleam/dict.{type Dict}
 import gleam/result
 import gleam/set.{type Set}
-import internal/label
-import internal/metric/histogram
 import themis.{
   type Store, type StoreError, LabelError, MetricError, MetricNameNotFound,
   Store,
 }
+import themis/internal/label
+import themis/internal/metric/histogram
 import themis/number.{type Number}
 
 /// Registers a new histogram metric to the store.
@@ -62,11 +62,11 @@ pub fn register(
 /// let labels = dict.from_list([#("instance", "localhost:9090")])
 /// let buckets = set.from_list(
 ///   [
-///     number.dec(0.05), 
-///     number.dec(0.1), 
-///     number.dec(0.2), 
-///     number.dec(0.5),
-///     number.int(1),
+///     number.decimal(0.05), 
+///     number.decimal(0.1), 
+///     number.decimal(0.2), 
+///     number.decimal(0.5),
+///     number.integer(1),
 ///   ]
 /// )
 /// let assert Ok(store) = init_record(
@@ -115,7 +115,7 @@ pub fn init_record(
 ///
 /// ```gleam
 /// let labels = dict.from_list([#("instance", "localhost:9090")])
-/// let value = number.dec(0.123)
+/// let value = number.decimal(0.123)
 /// let assert Ok(store) = observe(
 ///   store,
 ///   "app_request_processing_seconds", 

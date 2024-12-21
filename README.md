@@ -36,7 +36,7 @@ pub fn main() {
     )
 
   let labels = dict.from_list([#("foo", "bar")])
-  let value = number.int(10)
+  let value = number.integer(10)
   let assert Ok(metrics_store) =
     gauge.observe(metrics_store, "my_first_metric", labels, value)
 
@@ -62,7 +62,7 @@ pub fn main() {
       metrics_store,
       "my_second_metric",
       other_labels,
-      number.dec(1.2),
+      number.decimal(1.2),
     )
 
   // Histogram
@@ -70,11 +70,11 @@ pub fn main() {
   // Histograms work with buckets. Each bucket needs an upper boundary.
   let buckets =
     set.from_list([
-      number.dec(0.05),
-      number.dec(0.1),
-      number.dec(0.25),
-      number.dec(0.5),
-      number.int(1),
+      number.decimal(0.05),
+      number.decimal(0.1),
+      number.decimal(0.25),
+      number.decimal(0.5),
+      number.integer(1),
     ])
   let assert Ok(metrics_store) =
     histogram.register(
@@ -84,8 +84,8 @@ pub fn main() {
       buckets,
     )
 
-  let value = number.int(20)
-  let other_value = number.dec(1.5)
+  let value = number.integer(20)
+  let other_value = number.decimal(1.5)
   let labels = dict.from_list([#("toto", "tata")])
   let other_labels = dict.from_list([#("toto", "titi")])
   // Histograms can optionally be initialized manually
@@ -153,15 +153,15 @@ Themis metric values are set using the dedicated `Number` type. There are 5 numb
 import themis/number
 
 // Integer values
-let integer = number.int(1_234_567)
+let integer = number.integer(1_234_567)
 
 // Decimal (float) values
-let decimal = number.dec(23.5)
+let decimal = number.decimal(23.5)
 
 // Special values
-let positive_infinity = number.pos_inf()
-let negative_infinity = themis.neg_inf()
-let not_a_number = themis.nan()
+let positive_infinity = number.positive_infinity()
+let negative_infinity = number.negative_infinity()
+let not_a_number = number.not_a_number()
 ```
 ### Metric Types
 
@@ -182,7 +182,7 @@ let assert Ok(metrics_store) =
 
 // Set a gauge value with labels
 let labels = dict.from_list([#("process", "web_server")])
-let value = number.int(52_428_800)  // 50MB in bytes
+let value = number.integer(52_428_800)  // 50MB in bytes
 let assert Ok(metrics_store) =
   gauge.observe(metrics_store, "process_memory_bytes", labels, value)
 ```
@@ -217,7 +217,7 @@ let assert Ok(metrics_store) =
     metrics_store,
     "http_requests_total",
     labels,
-    number.dec(5.0),
+    number.decimal(5.0),
   )
 ```
 
@@ -231,14 +231,14 @@ import themis/histogram
 // Define histogram buckets (upper bounds of observation buckets in seconds)
 let buckets =
   set.from_list([
-    number.dec(0.005),  // 5ms
-    number.dec(0.01),   // 10ms
-    number.dec(0.025),  // 25ms
-    number.dec(0.05),   // 50ms
-    number.dec(0.1),    // 100ms
-    number.dec(0.25),   // 250ms
-    number.dec(0.5),    // 500ms
-    number.dec(1.0),    // 1s
+    number.decimal(0.005),  // 5ms
+    number.decimal(0.01),   // 10ms
+    number.decimal(0.025),  // 25ms
+    number.decimal(0.05),   // 50ms
+    number.decimal(0.1),    // 100ms
+    number.decimal(0.25),   // 250ms
+    number.decimal(0.5),    // 500ms
+    number.decimal(1.0),    // 1s
   ])
 
 // Register a new histogram metric
@@ -252,7 +252,7 @@ let assert Ok(metrics_store) =
 
 // Record an observation
 let labels = dict.from_list([#("method", "POST"), #("path", "/api/users")])
-let duration = number.dec(0.157)  // 157ms
+let duration = number.decimal(0.157)  // 157ms
 let assert Ok(metrics_store) =
   histogram.observe(
     metrics_store,

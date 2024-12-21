@@ -1,5 +1,4 @@
 import gleam/dict
-import gleam/io
 import gleam/set
 import gleeunit
 import gleeunit/should
@@ -17,8 +16,8 @@ pub fn store_gauge_record_test() {
   let labels = [#("foo", "bar")] |> dict.from_list
   let other_labels =
     [#("toto", "tata"), #("wibble", "wobble")] |> dict.from_list
-  let value = number.int(10)
-  let new_value = number.pos_inf()
+  let value = number.integer(10)
+  let new_value = number.positive_infinity()
   let store =
     themis.new()
     |> gauge.register("my_metric", "My first gauge")
@@ -55,8 +54,8 @@ pub fn store_counter_record_test() {
   let labels = [#("foo", "bar")] |> dict.from_list
   let other_labels =
     [#("toto", "tata"), #("wibble", "wobble")] |> dict.from_list
-  let increment_by = number.int(10)
-  // let new_value = number.pos_inf()
+  let increment_by = number.integer(10)
+  // let new_value = number.positive_infinity()
   let store =
     themis.new()
     |> counter.register("my_metric", "My first counter")
@@ -95,11 +94,11 @@ pub fn store_histogram_record_test() {
   let labels = [#("foo", "bar")] |> dict.from_list
   let other_labels =
     [#("toto", "tata"), #("wibble", "wobble")] |> dict.from_list
-  let value1 = number.int(1)
-  let value2 = number.dec(1.5)
-  let value3 = number.int(100)
+  let value1 = number.integer(1)
+  let value2 = number.decimal(1.5)
+  let value3 = number.integer(100)
 
-  let buckets = set.from_list([number.int(1), number.int(2)])
+  let buckets = set.from_list([number.integer(1), number.integer(2)])
 
   let store =
     themis.new()
@@ -169,11 +168,11 @@ pub fn store_full_test() {
     |> counter.init_record("my_cou_metric", other_labels)
     |> should.be_ok
 
-  let value1 = number.int(1)
-  let value2 = number.dec(1.5)
-  let value3 = number.int(100)
+  let value1 = number.integer(1)
+  let value2 = number.decimal(1.5)
+  let value3 = number.integer(100)
 
-  let buckets = set.from_list([number.int(1), number.int(2)])
+  let buckets = set.from_list([number.integer(1), number.integer(2)])
 
   // Creating histogram
   let store =
@@ -189,8 +188,8 @@ pub fn store_full_test() {
 
   // Creating gauge
 
-  let value = number.int(10)
-  let new_value = number.pos_inf()
+  let value = number.integer(10)
+  let new_value = number.positive_infinity()
   let store =
     store
     |> gauge.register("my_gau_metric", "My first gauge")

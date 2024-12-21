@@ -1,12 +1,12 @@
 import gleam/bool
 import gleam/dict.{type Dict}
 import gleam/result
-import internal/label
-import internal/metric/counter
 import themis.{
   type Store, type StoreError, LabelError, MetricError, MetricNameNotFound,
   Store,
 }
+import themis/internal/label
+import themis/internal/metric/counter
 import themis/number.{type Number}
 
 /// Registers a new counter metric to the store.
@@ -141,7 +141,7 @@ pub fn increment(
 ///   store,
 ///   "http_request_failures",
 ///   labels,
-///   number.int(12),
+///   number.integer(12),
 /// )
 /// ```
 pub fn increment_by(

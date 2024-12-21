@@ -3,11 +3,11 @@ import gleam/dict.{type Dict}
 import gleam/list
 import gleam/set.{type Set}
 import gleam/string_tree
-import internal/label
-import internal/metric.{type Metric, Metric}
-import internal/metric/counter.{type Counter}
-import internal/metric/gauge.{type Gauge}
-import internal/metric/histogram.{type Histogram, type HistogramRecord}
+import themis/internal/label
+import themis/internal/metric.{type Metric, Metric}
+import themis/internal/metric/counter.{type Counter}
+import themis/internal/metric/gauge.{type Gauge}
+import themis/internal/metric/histogram.{type Histogram, type HistogramRecord}
 import themis/number.{type Number}
 
 /// A Store manages a collection of metrics, ensuring unique metric names.

@@ -3,7 +3,7 @@ import gleam/list
 import gleam/regexp
 import gleam/result
 import gleam/string
-import internal/label
+import themis/internal/label
 
 pub type MetricError {
   InvalidMetricName

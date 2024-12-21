@@ -1,9 +1,9 @@
 import gleam/list
 import gleam/string
 import gleeunit/should
-import internal/label
-import internal/metric
 import simplifile
+import themis/internal/label
+import themis/internal/metric
 
 pub fn names_test() {
   let assert Ok(valid_cases_content) =

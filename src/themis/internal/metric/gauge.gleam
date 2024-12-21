@@ -2,8 +2,8 @@ import gleam/dict
 import gleam/list
 import gleam/result
 import gleam/string_tree
-import internal/label.{type LabelSet}
-import internal/metric.{type Metric, type MetricName, Metric}
+import themis/internal/label.{type LabelSet}
+import themis/internal/metric.{type Metric, type MetricName, Metric}
 import themis/number.{type Number}
 
 pub type Gauge

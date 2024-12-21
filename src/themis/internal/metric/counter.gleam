@@ -2,8 +2,10 @@ import gleam/dict
 import gleam/list
 import gleam/result
 import gleam/string_tree
-import internal/label.{type LabelSet}
-import internal/metric.{type Metric, type MetricError, type MetricName, Metric}
+import themis/internal/label.{type LabelSet}
+import themis/internal/metric.{
+  type Metric, type MetricError, type MetricName, Metric,
+}
 import themis/number.{type Number, Int}
 
 pub type Counter
@@ -48,7 +50,7 @@ pub fn increment_by(
 ) -> Metric(Counter, Number, Nil) {
   let new_val =
     dict.get(from.records, labels)
-    |> result.unwrap(number.int(0))
+    |> result.unwrap(number.integer(0))
     |> number.add(by)
   Metric(..from, records: from.records |> dict.insert(labels, new_val))
 }
