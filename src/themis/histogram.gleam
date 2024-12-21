@@ -39,7 +39,10 @@ pub fn create_record(
   use histogram <- result.try(
     dict.get(store.histograms, name) |> result.replace_error(MetricNameNotFound),
   )
-  let updated_histogram = histogram.create_record(histogram, labels, thresholds)
+  use updated_histogram <- result.try(
+    histogram.create_record(histogram, labels, thresholds)
+    |> result.try_recover(fn(e) { Error(themis.HistogramError(e)) }),
+  )
   Ok(
     Store(
       ..store,

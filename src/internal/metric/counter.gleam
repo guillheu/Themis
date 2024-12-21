@@ -8,6 +8,7 @@ import gleam/string_tree
 import internal/label.{type LabelSet}
 import internal/metric.{type Metric, type MetricError, type MetricName, Metric}
 import internal/prometheus.{type Number, Dec, Int, NaN, NegInf, PosInf}
+import themis/number
 
 pub type Counter
 
@@ -60,17 +61,7 @@ pub fn increment_by(
 ) -> Result(Metric(Counter, Number), CounterError) {
   let new_val_result = case dict.get(from.records, labels) {
     Error(_) -> Error(RecordNotFound)
-    Ok(number) ->
-      case number, by {
-        Int(first), Int(second) -> Ok(Int(first + second))
-        Dec(first), Dec(second) -> Ok(Dec(float.add(first, second)))
-        Dec(dec), Int(int) | Int(int), Dec(dec) ->
-          Ok(Dec(float.add(int.to_float(int), dec)))
-        PosInf, NegInf | NegInf, PosInf -> Ok(NaN)
-        PosInf, _ | _, PosInf -> Ok(PosInf)
-        NegInf, _ | _, NegInf -> Ok(NegInf)
-        _, _ -> Ok(NaN)
-      }
+    Ok(number) -> Ok(number.add(number, by))
   }
   use new_val <- result.map(new_val_result)
   Metric(..from, records: from.records |> dict.insert(labels, new_val))

@@ -15,16 +15,8 @@ pub opaque type MetricName {
 }
 
 pub type Metric(kind, record_type) {
-  Metric(
-    // name: MetricName,
-    description: String,
-    records: Dict(label.LabelSet, record_type),
-  )
+  Metric(description: String, records: Dict(label.LabelSet, record_type))
 }
-
-// pub type HistogramRecord {
-//   HistogramRecord(count: Int, sum: Number, buckets: Dict(Number, Number))
-// }
 
 pub fn new_name(
   from: String,
