@@ -56,7 +56,7 @@ pub fn register(
 ///   labels,
 /// )
 /// ```
-pub fn new_record(
+pub fn create_record(
   store store: Store,
   counter_name name_string: String,
   labels labels_dict: Dict(String, String),

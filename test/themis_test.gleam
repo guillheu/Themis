@@ -60,11 +60,11 @@ pub fn store_counter_record_test() {
     themis.new()
     |> counter.register("my_metric", "My first counter")
     |> should.be_ok
-    |> counter.new_record("my_metric", labels)
+    |> counter.create_record("my_metric", labels)
     |> should.be_ok
     |> counter.increment_record("my_metric", labels)
     |> should.be_ok
-    |> counter.new_record("my_metric", other_labels)
+    |> counter.create_record("my_metric", other_labels)
     |> should.be_ok
 
   store

@@ -74,7 +74,7 @@ pub fn to_string_test() {
     "# HELP my_metric A simple counter for testing\n# TYPE my_metric counter\nmy_metric{foo=\"bar\"} 1\n",
   )
 
-  let new_record_labels =
+  let create_record_labels =
     label.new()
     |> label.add_label("foo", "bar")
     |> should.be_ok
@@ -84,7 +84,7 @@ pub fn to_string_test() {
     |> should.be_ok
 
   make_test_counter(with_record: True, dec: False)
-  |> counter.create_record(new_record_labels)
+  |> counter.create_record(create_record_labels)
   |> should.be_ok
   |> counter.print("my_metric" |> metric.new_name([]) |> should.be_ok)
   // |> io.println_error
