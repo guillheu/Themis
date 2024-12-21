@@ -8,14 +8,20 @@ import internal/prometheus
 pub fn create_test() {
   let expected = make_test_gauge(with_record: False)
 
-  gauge.new("A simple gauge for testing")
+  let #(_name, metric) =
+    gauge.new("my_metric", "A simple gauge for testing") |> should.be_ok
+
+  metric
   |> should.equal(expected)
 }
 
 pub fn update_test() {
   let expected = make_test_gauge(with_record: True)
 
-  gauge.new("A simple gauge for testing")
+  let #(_name, metric) =
+    gauge.new("my_metric", "A simple gauge for testing")
+    |> should.be_ok
+  metric
   |> gauge.insert_record(
     label.new() |> label.add_label("foo", "bar") |> should.be_ok,
     prometheus.Int(10),
@@ -36,15 +42,15 @@ pub fn delete_test() {
 
 pub fn to_string_test() {
   make_test_gauge(with_record: False)
-  |> gauge.print("my_gauge" |> metric.new_name |> should.be_ok)
+  |> gauge.print("my_metric" |> metric.new_name([]) |> should.be_ok)
   |> should.equal(
-    "HELP my_gauge A simple gauge for testing\nTYPE my_gauge gauge\n",
+    "# HELP my_metric A simple gauge for testing\n# TYPE my_metric gauge\n",
   )
 
   make_test_gauge(with_record: True)
-  |> gauge.print("my_gauge" |> metric.new_name |> should.be_ok)
+  |> gauge.print("my_metric" |> metric.new_name([]) |> should.be_ok)
   |> should.equal(
-    "HELP my_gauge A simple gauge for testing\nTYPE my_gauge gauge\nmy_gauge{foo=\"bar\"} 10\n",
+    "# HELP my_metric A simple gauge for testing\n# TYPE my_metric gauge\nmy_metric{foo=\"bar\"} 10\n",
   )
 
   let new_record_labels =
@@ -58,9 +64,9 @@ pub fn to_string_test() {
 
   make_test_gauge(with_record: True)
   |> gauge.insert_record(new_record_labels, prometheus.Int(69))
-  |> gauge.print("my_gauge" |> metric.new_name |> should.be_ok)
+  |> gauge.print("my_metric" |> metric.new_name([]) |> should.be_ok)
   |> should.equal(
-    "HELP my_gauge A simple gauge for testing\nTYPE my_gauge gauge\nmy_gauge{foo=\"bar\"} 10\nmy_gauge{foo=\"bar\",toto=\"tata\",wibble=\"wobble\"} 69\n",
+    "# HELP my_metric A simple gauge for testing\n# TYPE my_metric gauge\nmy_metric{foo=\"bar\"} 10\nmy_metric{foo=\"bar\",toto=\"tata\",wibble=\"wobble\"} 69\n",
   )
 }
 

@@ -6,7 +6,7 @@ import gleam/list
 import gleam/result
 import gleam/string_tree
 import internal/label.{type LabelSet}
-import internal/metric.{type Metric, Metric}
+import internal/metric.{type Metric, type MetricError, type MetricName, Metric}
 import internal/prometheus.{type Number, Dec, Int, NaN, NegInf, PosInf}
 
 pub type Counter
@@ -14,10 +14,20 @@ pub type Counter
 pub type CounterError {
   RecordAlreadyExists
   RecordNotFound
+  NameError(metric.MetricError)
 }
 
-pub fn new(description description: String) -> Metric(Counter, Number) {
-  Metric(description, dict.new())
+const blacklist = ["counter"]
+
+pub fn new(
+  name name: String,
+  description description: String,
+) -> Result(#(MetricName, Metric(Counter, Number)), MetricError) {
+  let r =
+    name
+    |> new_name
+  use name <- result.map(r)
+  #(name, Metric(description, dict.new()))
 }
 
 pub fn create_record(
@@ -78,8 +88,8 @@ pub fn print(
   name name: metric.MetricName,
 ) -> String {
   let name = metric.name_to_string(name)
-  let help = "HELP " <> name <> " " <> metric.description
-  let type_ = "TYPE " <> name <> " counter"
+  let help = "# HELP " <> name <> " " <> metric.description
+  let type_ = "# TYPE " <> name <> " counter"
   {
     use current, labels, value <- dict.fold(metric.records, [
       help <> "\n" <> type_ <> "\n",
@@ -92,4 +102,9 @@ pub fn print(
   |> list.reverse
   |> string_tree.from_strings
   |> string_tree.to_string
+}
+
+pub fn new_name(name name: String) -> Result(MetricName, metric.MetricError) {
+  { name <> "_total" }
+  |> metric.new_name(blacklist)
 }

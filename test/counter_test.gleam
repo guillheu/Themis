@@ -1,4 +1,5 @@
 import gleam/dict
+import gleam/io
 import gleeunit/should
 import internal/label
 import internal/metric
@@ -7,29 +8,46 @@ import internal/prometheus
 
 pub fn create_test() {
   let expected = make_test_counter(with_record: False, dec: False)
-
-  counter.new("A simple counter for testing")
+  let #(name, metric) =
+    counter.new("my_metric", "A simple counter for testing") |> should.be_ok
+  metric
   |> should.equal(expected)
+
+  name
+  |> should.equal("my_metric_total" |> metric.new_name([]) |> should.be_ok)
 }
 
 pub fn increment_test() {
   let expected = make_test_counter(with_record: True, dec: False)
   let labels = label.new() |> label.add_label("foo", "bar") |> should.be_ok
+  let base_name = "my_metric"
 
-  counter.new("A simple counter for testing")
+  let #(name, metric) =
+    counter.new(base_name, "A simple counter for testing") |> should.be_ok
+
+  metric
   |> counter.create_record(labels)
   |> should.be_ok
   |> counter.increment(labels)
   |> should.be_ok
   |> should.equal(expected)
 
+  name
+  |> should.equal("my_metric_total" |> metric.new_name([]) |> should.be_ok)
+
   let expected = make_test_counter(with_record: True, dec: True)
-  counter.new("A simple counter for testing")
+  let #(name, metric) =
+    counter.new(base_name, "A simple counter for testing") |> should.be_ok
+
+  metric
   |> counter.create_record(labels)
   |> should.be_ok
   |> counter.increment_by(labels, prometheus.Dec(1.0))
   |> should.be_ok
   |> should.equal(expected)
+
+  name
+  |> should.equal("my_metric_total" |> metric.new_name([]) |> should.be_ok)
 }
 
 pub fn delete_test() {
@@ -45,15 +63,15 @@ pub fn delete_test() {
 
 pub fn to_string_test() {
   make_test_counter(with_record: False, dec: False)
-  |> counter.print("my_counter" |> metric.new_name |> should.be_ok)
+  |> counter.print("my_metric" |> metric.new_name([]) |> should.be_ok)
   |> should.equal(
-    "HELP my_counter A simple counter for testing\nTYPE my_counter counter\n",
+    "# HELP my_metric A simple counter for testing\n# TYPE my_metric counter\n",
   )
 
   make_test_counter(with_record: True, dec: False)
-  |> counter.print("my_counter" |> metric.new_name |> should.be_ok)
+  |> counter.print("my_metric" |> metric.new_name([]) |> should.be_ok)
   |> should.equal(
-    "HELP my_counter A simple counter for testing\nTYPE my_counter counter\nmy_counter{foo=\"bar\"} 1\n",
+    "# HELP my_metric A simple counter for testing\n# TYPE my_metric counter\nmy_metric{foo=\"bar\"} 1\n",
   )
 
   let new_record_labels =
@@ -68,14 +86,15 @@ pub fn to_string_test() {
   make_test_counter(with_record: True, dec: False)
   |> counter.create_record(new_record_labels)
   |> should.be_ok
-  |> counter.print("my_counter" |> metric.new_name |> should.be_ok)
+  |> counter.print("my_metric" |> metric.new_name([]) |> should.be_ok)
+  // |> io.println_error
   |> should.equal(
-    "HELP my_counter A simple counter for testing\nTYPE my_counter counter\nmy_counter{foo=\"bar\"} 1\nmy_counter{foo=\"bar\",toto=\"tata\",wibble=\"wobble\"} 0\n",
+    "# HELP my_metric A simple counter for testing\n# TYPE my_metric counter\nmy_metric{foo=\"bar\"} 1\nmy_metric{foo=\"bar\",toto=\"tata\",wibble=\"wobble\"} 0\n",
   )
-  // HELP my_counter A simple counter for testing
-  // TYPE my_counter counter
-  // my_counter{foo="bar"} 1
-  // my_counter{foo="bar",toto="tata",wibble="wobble"} 0
+  // # HELP my_metric A simple counter for testing
+  // # TYPE my_metric counter
+  // my_metric{foo="bar"} 1
+  // my_metric{foo="bar",toto="tata",wibble="wobble"} 0
 }
 
 fn make_test_counter(

@@ -73,8 +73,8 @@ let unknown = themis.nan()
 The metrics are exported in the standard Prometheus text format:
 
 ```
-# HELP process_memory_bytes Current memory usage in bytes
-# TYPE process_memory_bytes gauge
+# # HELP process_memory_bytes Current memory usage in bytes
+# # TYPE process_memory_bytes gauge
 process_memory_bytes{process="web_server",instance="prod-1"} 1234567
 ```
 
