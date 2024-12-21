@@ -14,8 +14,8 @@ import themis/number.{type Number}
 /// ## Arguments
 ///
 /// - `store`: The metrics store to add the gauge to
-/// - `name`: The name of the gauge metric (must be a valid Prometheus metric name)
-/// - `description`: A human-readable description of what the gauge measures
+/// - `name`: The name of the new gauge metric (must be a valid Prometheus metric name)
+/// - `description`: A human-readable description of what the gauge observes
 ///
 /// ## Examples
 ///
@@ -31,11 +31,16 @@ pub fn register(
   name name_string: String,
   description description: String,
 ) -> Result(Store, StoreError) {
-  use #(name, gauge) <- result.map(
+  use #(name, gauge) <- result.try(
     gauge.new(name_string, description)
     |> result.try_recover(fn(e) { Error(MetricError(e)) }),
   )
-  Store(..store, gauges: dict.insert(store.gauges, name, gauge))
+
+  use <- bool.guard(
+    themis.is_metric_name_used(store, name),
+    Error(themis.MetricNameAlreadyInUse),
+  )
+  Ok(Store(..store, gauges: dict.insert(store.gauges, name, gauge)))
 }
 
 /// Records a value for a gauge metric with the given labels.
@@ -43,7 +48,7 @@ pub fn register(
 /// ## Arguments
 ///
 /// - `store`: The metrics store containing the gauge
-/// - `gauge_name`: The name of the gauge to record a value for
+/// - `gauge_name`: The name of the gauge
 /// - `labels`: A dictionary of labels
 /// - `value`: The numeric value to record
 ///
@@ -58,7 +63,7 @@ pub fn register(
 ///   int(42),
 /// )
 /// ```
-pub fn insert_record(
+pub fn observe(
   store store: Store,
   gauge_name name_string: String,
   labels labels_dict: Dict(String, String),
@@ -75,7 +80,7 @@ pub fn insert_record(
   use gauge <- result.try(
     dict.get(store.gauges, name) |> result.replace_error(MetricNameNotFound),
   )
-  let updated_gauge = gauge.insert_record(gauge, labels, value)
+  let updated_gauge = gauge.observe(gauge, labels, value)
   Ok(Store(..store, gauges: dict.insert(store.gauges, name, updated_gauge)))
 }
 

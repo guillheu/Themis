@@ -17,28 +17,28 @@ const blacklist = ["gauge"]
 pub fn new(
   name name: String,
   description description: String,
-) -> Result(#(MetricName, Metric(Gauge, Number)), metric.MetricError) {
+) -> Result(#(MetricName, Metric(Gauge, Number, Nil)), metric.MetricError) {
   use name <- result.map(new_name(name))
-  #(name, Metric(description, dict.new()))
+  #(name, Metric(description, dict.new(), Nil))
 }
 
-pub fn insert_record(
-  to to: Metric(Gauge, Number),
+pub fn observe(
+  to to: Metric(Gauge, Number, Nil),
   labels labels: LabelSet,
   value value: Number,
-) -> Metric(Gauge, Number) {
+) -> Metric(Gauge, Number, Nil) {
   Metric(..to, records: dict.insert(to.records, labels, value))
 }
 
 pub fn delete_record(
-  from from: Metric(Gauge, Number),
+  from from: Metric(Gauge, Number, Nil),
   labels labels: LabelSet,
-) -> Metric(Gauge, Number) {
+) -> Metric(Gauge, Number, Nil) {
   Metric(..from, records: dict.delete(from.records, labels))
 }
 
 pub fn print(
-  metric metric: Metric(Gauge, Number),
+  metric metric: Metric(Gauge, Number, Nil),
   name name: metric.MetricName,
 ) -> String {
   let name = metric.name_to_string(name)

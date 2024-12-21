@@ -14,8 +14,8 @@ import themis/number.{type Number}
 /// ## Arguments
 ///
 /// - `store`: The metrics store to add the counter to
-/// - `name`: The name of the counter metric (must be a valid Prometheus metric name)
-/// - `description`: A human-readable description of what the counter measures
+/// - `name`: The name of the new counter metric (must be a valid Prometheus metric name)
+/// - `description`: A human-readable description of what the counter observes
 ///
 /// ## Examples
 ///
@@ -31,11 +31,16 @@ pub fn register(
   name name_string: String,
   description description: String,
 ) -> Result(Store, StoreError) {
-  use #(name, counter) <- result.map(
+  use #(name, counter) <- result.try(
     counter.new(name_string, description)
     |> result.try_recover(fn(e) { Error(MetricError(e)) }),
   )
-  Store(..store, counters: dict.insert(store.counters, name, counter))
+
+  use <- bool.guard(
+    themis.is_metric_name_used(store, name),
+    Error(themis.MetricNameAlreadyInUse),
+  )
+  Ok(Store(..store, counters: dict.insert(store.counters, name, counter)))
 }
 
 /// Initializes a new counter metric record with the given labels.
@@ -43,20 +48,20 @@ pub fn register(
 /// ## Arguments
 ///
 /// - `store`: The metrics store containing the counter
-/// - `counter_name`: The name of the counter to record a value for
+/// - `counter_name`: The name of the counter
 /// - `labels`: A dictionary of labels
 ///
 /// ## Examples
 ///
 /// ```gleam
 /// let labels = dict.from_list([#("instance", "localhost:9090")])
-/// let assert Ok(store) = insert_record(
+/// let assert Ok(store) = init_record(
 ///   store,
 ///   "http_request_failures",
 ///   labels,
 /// )
 /// ```
-pub fn create_record(
+pub fn init_record(
   store store: Store,
   counter_name name_string: String,
   labels labels_dict: Dict(String, String),
@@ -72,10 +77,8 @@ pub fn create_record(
   use counter <- result.try(
     dict.get(store.counters, name) |> result.replace_error(MetricNameNotFound),
   )
-  use updated_counter <- result.try(
-    counter.create_record(counter, labels)
-    |> result.try_recover(fn(e) { Error(themis.CounterError(e)) }),
-  )
+  let updated_counter = counter.init_record(counter, labels)
+
   Ok(
     Store(..store, counters: dict.insert(store.counters, name, updated_counter)),
   )
@@ -86,20 +89,20 @@ pub fn create_record(
 /// ## Arguments
 ///
 /// - `store`: The metrics store containing the counter
-/// - `counter_name`: The name of the counter to record a value for
+/// - `counter_name`: The name of the counter
 /// - `labels`: A dictionary of labels
 ///
 /// ## Examples
 ///
 /// ```gleam
 /// let labels = dict.from_list([#("instance", "localhost:9090")])
-/// let assert Ok(store) = increment_record(
+/// let assert Ok(store) = increment(
 ///   store,
 ///   "http_request_failures",
 ///   labels,
 /// )
 /// ```
-pub fn increment_record(
+pub fn increment(
   store store: Store,
   counter_name name_string: String,
   labels labels_dict: Dict(String, String),
@@ -115,10 +118,8 @@ pub fn increment_record(
   use counter <- result.try(
     dict.get(store.counters, name) |> result.replace_error(MetricNameNotFound),
   )
-  use updated_counter <- result.try(
-    counter.increment(counter, labels)
-    |> result.try_recover(fn(e) { Error(themis.CounterError(e)) }),
-  )
+  let updated_counter = counter.increment(counter, labels)
+
   Ok(
     Store(..store, counters: dict.insert(store.counters, name, updated_counter)),
   )
@@ -129,21 +130,21 @@ pub fn increment_record(
 /// ## Arguments
 ///
 /// - `store`: The metrics store containing the counter
-/// - `counter_name`: The name of the counter to record a value for
+/// - `counter_name`: The name of the counter
 /// - `labels`: A dictionary of labels
 ///
 /// ## Examples
 ///
 /// ```gleam
 /// let labels = dict.from_list([#("instance", "localhost:9090")])
-/// let assert Ok(store) = increment_record(
+/// let assert Ok(store) = increment(
 ///   store,
 ///   "http_request_failures",
 ///   labels,
 ///   number.int(12),
 /// )
 /// ```
-pub fn increment_record_by(
+pub fn increment_by(
   store store: Store,
   counter_name name_string: String,
   labels labels_dict: Dict(String, String),
@@ -160,10 +161,8 @@ pub fn increment_record_by(
   use counter <- result.try(
     dict.get(store.counters, name) |> result.replace_error(MetricNameNotFound),
   )
-  use updated_counter <- result.try(
-    counter.increment_by(counter, labels, by)
-    |> result.try_recover(fn(e) { Error(themis.CounterError(e)) }),
-  )
+  let updated_counter = counter.increment_by(counter, labels, by)
+
   Ok(
     Store(..store, counters: dict.insert(store.counters, name, updated_counter)),
   )

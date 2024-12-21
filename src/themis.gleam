@@ -1,6 +1,7 @@
 import gleam/bool
 import gleam/dict.{type Dict}
 import gleam/list
+import gleam/set.{type Set}
 import gleam/string_tree
 import internal/label
 import internal/metric.{type Metric, Metric}
@@ -12,9 +13,12 @@ import themis/number.{type Number}
 /// A Store manages a collection of metrics, ensuring unique metric names.
 pub type Store {
   Store(
-    gauges: Dict(metric.MetricName, Metric(Gauge, Number)),
-    counters: Dict(metric.MetricName, Metric(Counter, Number)),
-    histograms: Dict(metric.MetricName, Metric(Histogram, HistogramRecord)),
+    gauges: Dict(metric.MetricName, Metric(Gauge, Number, Nil)),
+    counters: Dict(metric.MetricName, Metric(Counter, Number, Nil)),
+    histograms: Dict(
+      metric.MetricName,
+      Metric(Histogram, HistogramRecord, Set(Number)),
+    ),
   )
 }
 
@@ -57,7 +61,7 @@ pub fn print(metrics_store store: Store) -> String {
 }
 
 fn print_gauges(
-  gauges: Dict(metric.MetricName, Metric(Gauge, Number)),
+  gauges: Dict(metric.MetricName, Metric(Gauge, Number, Nil)),
 ) -> String {
   {
     use current, name, gauge <- dict.fold(gauges, [])
@@ -69,7 +73,7 @@ fn print_gauges(
 }
 
 fn print_counters(
-  counters: Dict(metric.MetricName, Metric(Counter, Number)),
+  counters: Dict(metric.MetricName, Metric(Counter, Number, Nil)),
 ) -> String {
   {
     use current, name, counter <- dict.fold(counters, [])
@@ -81,7 +85,10 @@ fn print_counters(
 }
 
 fn print_histograms(
-  histograms: Dict(metric.MetricName, Metric(Histogram, HistogramRecord)),
+  histograms: Dict(
+    metric.MetricName,
+    Metric(Histogram, HistogramRecord, Set(Number)),
+  ),
 ) -> String {
   {
     use current, counter, name <- dict.fold(histograms, [])

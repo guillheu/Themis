@@ -1,5 +1,4 @@
 import gleam/dict
-import gleam/io
 import gleeunit/should
 import internal/label
 import internal/metric
@@ -26,10 +25,7 @@ pub fn increment_test() {
     counter.new(base_name, "A simple counter for testing") |> should.be_ok
 
   metric
-  |> counter.create_record(labels)
-  |> should.be_ok
   |> counter.increment(labels)
-  |> should.be_ok
   |> should.equal(expected)
 
   name
@@ -40,10 +36,7 @@ pub fn increment_test() {
     counter.new(base_name, "A simple counter for testing") |> should.be_ok
 
   metric
-  |> counter.create_record(labels)
-  |> should.be_ok
   |> counter.increment_by(labels, number.Dec(1.0))
-  |> should.be_ok
   |> should.equal(expected)
 
   name
@@ -74,7 +67,7 @@ pub fn to_string_test() {
     "# HELP my_metric A simple counter for testing\n# TYPE my_metric counter\nmy_metric{foo=\"bar\"} 1\n",
   )
 
-  let create_record_labels =
+  let labels =
     label.new()
     |> label.add_label("foo", "bar")
     |> should.be_ok
@@ -84,8 +77,7 @@ pub fn to_string_test() {
     |> should.be_ok
 
   make_test_counter(with_record: True, dec: False)
-  |> counter.create_record(create_record_labels)
-  |> should.be_ok
+  |> counter.init_record(labels)
   |> counter.print("my_metric" |> metric.new_name([]) |> should.be_ok)
   // |> io.println_error
   |> should.equal(
@@ -100,7 +92,7 @@ pub fn to_string_test() {
 fn make_test_counter(
   with_record with_record: Bool,
   dec dec: Bool,
-) -> metric.Metric(counter.Counter, number.Number) {
+) -> metric.Metric(counter.Counter, number.Number, Nil) {
   let val = case dec {
     False -> number.Int(1)
     True -> number.Dec(1.0)
@@ -112,5 +104,5 @@ fn make_test_counter(
       dict.from_list([#(labels, val)])
     }
   }
-  metric.Metric("A simple counter for testing", records)
+  metric.Metric("A simple counter for testing", records, Nil)
 }

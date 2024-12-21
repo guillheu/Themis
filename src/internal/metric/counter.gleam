@@ -1,4 +1,3 @@
-import gleam/bool
 import gleam/dict
 import gleam/list
 import gleam/result
@@ -20,54 +19,49 @@ const blacklist = ["counter"]
 pub fn new(
   name name: String,
   description description: String,
-) -> Result(#(MetricName, Metric(Counter, Number)), MetricError) {
+) -> Result(#(MetricName, Metric(Counter, Number, Nil)), MetricError) {
   let r =
     name
     |> new_name
   use name <- result.map(r)
-  #(name, Metric(description, dict.new()))
+  #(name, Metric(description, dict.new(), Nil))
 }
 
-pub fn create_record(
-  from from: Metric(Counter, Number),
+pub fn init_record(
+  from from: Metric(Counter, Number, Nil),
   with_labels labels: LabelSet,
-) -> Result(Metric(Counter, Number), CounterError) {
-  use <- bool.guard(
-    dict.has_key(from.records, labels),
-    Error(RecordAlreadyExists),
-  )
-  Ok(Metric(..from, records: from.records |> dict.insert(labels, Int(0))))
+) -> Metric(Counter, Number, Nil) {
+  Metric(..from, records: from.records |> dict.insert(labels, Int(0)))
 }
 
 pub fn increment(
-  from from: Metric(Counter, Number),
+  from from: Metric(Counter, Number, Nil),
   labels labels: LabelSet,
-) -> Result(Metric(Counter, Number), CounterError) {
+) -> Metric(Counter, Number, Nil) {
   increment_by(from, labels, Int(1))
 }
 
 pub fn increment_by(
-  from from: Metric(Counter, Number),
+  from from: Metric(Counter, Number, Nil),
   labels labels: LabelSet,
   by by: Number,
-) -> Result(Metric(Counter, Number), CounterError) {
-  let new_val_result = case dict.get(from.records, labels) {
-    Error(_) -> Error(RecordNotFound)
-    Ok(number) -> Ok(number.add(number, by))
-  }
-  use new_val <- result.map(new_val_result)
+) -> Metric(Counter, Number, Nil) {
+  let new_val =
+    dict.get(from.records, labels)
+    |> result.unwrap(number.int(0))
+    |> number.add(by)
   Metric(..from, records: from.records |> dict.insert(labels, new_val))
 }
 
 pub fn delete_record(
-  from from: Metric(Counter, Number),
+  from from: Metric(Counter, Number, Nil),
   labels labels: LabelSet,
-) -> Metric(Counter, Number) {
+) -> Metric(Counter, Number, Nil) {
   Metric(..from, records: dict.delete(from.records, labels))
 }
 
 pub fn print(
-  metric metric: Metric(Counter, Number),
+  metric metric: Metric(Counter, Number, Nil),
   name name: metric.MetricName,
 ) -> String {
   let name = metric.name_to_string(name)

@@ -14,8 +14,12 @@ pub opaque type MetricName {
   MetricName(name: String)
 }
 
-pub type Metric(kind, record_type) {
-  Metric(description: String, records: Dict(label.LabelSet, record_type))
+pub type Metric(kind, record_type, extra) {
+  Metric(
+    description: String,
+    records: Dict(label.LabelSet, record_type),
+    extra: extra,
+  )
 }
 
 const name_regex_pattern = "^[a-zA-Z][a-zA-Z0-9_:]*$"

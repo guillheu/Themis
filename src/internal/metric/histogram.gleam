@@ -16,9 +16,9 @@ pub type HistogramRecord {
 }
 
 pub type HistogramError {
-  RecordNotFound
   InvalidNaNLabel
   NumberError(number.ComparisonError)
+  MetricError(metric.MetricError)
 }
 
 const blacklist = ["histogram"]
@@ -26,78 +26,87 @@ const blacklist = ["histogram"]
 pub fn new(
   name name: String,
   description description: String,
+  buckets buckets: Set(Number),
 ) -> Result(
-  #(MetricName, Metric(Histogram, HistogramRecord)),
-  metric.MetricError,
+  #(MetricName, Metric(Histogram, HistogramRecord, Set(Number))),
+  HistogramError,
 ) {
   let r =
     name
     |> new_name
-  use name <- result.map(r)
-  #(name, Metric(description, dict.new()))
-}
+    |> result.try_recover(fn(e) { Error(MetricError(e)) })
+  use name <- result.try(r)
 
-pub fn create_record(
-  to to: Metric(Histogram, HistogramRecord),
-  labels labels: LabelSet,
-  bucket_thresholds thresholds: Set(Number),
-) -> Result(Metric(Histogram, HistogramRecord), HistogramError) {
-  let keys =
-    thresholds
-    |> set.insert(number.PosInf)
-    |> set.to_list
   let r = {
-    use key <- list.any(keys)
+    use key <- list.any(buckets |> set.to_list)
     // histogram bucket `le` values cannot be NaN
     key == number.NaN
   }
   use <- bool.guard(r, Error(InvalidNaNLabel))
-  let values = list.repeat(number.int(0), list.length(keys))
-  let buckets = list.zip(keys, values) |> dict.from_list
-  let record =
-    HistogramRecord(count: number.int(0), sum: number.int(0), buckets: buckets)
-  Ok(Metric(..to, records: dict.insert(to.records, labels, record)))
+
+  Ok(#(name, Metric(description, dict.new(), buckets)))
 }
 
-pub fn measure(
-  to to: Metric(Histogram, HistogramRecord),
+pub fn init_record(
+  to to: Metric(Histogram, HistogramRecord, Set(Number)),
   labels labels: LabelSet,
-  measured value: Number,
-) -> Result(Metric(Histogram, HistogramRecord), HistogramError) {
-  use record <- result.try(
-    dict.get(to.records, labels) |> result.replace_error(RecordNotFound),
-  )
-  let r = {
+) -> Metric(Histogram, HistogramRecord, Set(Number)) {
+  let record = new_record(to)
+  Metric(..to, records: dict.insert(to.records, labels, record))
+}
+
+fn new_record(
+  to to: Metric(Histogram, HistogramRecord, Set(Number)),
+) -> HistogramRecord {
+  let keys =
+    to.extra
+    |> set.insert(number.PosInf)
+    |> set.to_list
+
+  let values = list.repeat(number.int(0), list.length(keys))
+  let buckets = list.zip(keys, values) |> dict.from_list
+  HistogramRecord(count: number.int(0), sum: number.int(0), buckets: buckets)
+}
+
+pub fn observe(
+  to to: Metric(Histogram, HistogramRecord, Set(Number)),
+  labels labels: LabelSet,
+  observed value: Number,
+) -> Metric(Histogram, HistogramRecord, Set(Number)) {
+  let record = result.unwrap(dict.get(to.records, labels), new_record(to))
+  let updated_buckets_list = {
     // `count` is always initialized as a number.int(0)
-    // See create_record
-    use #(le, bucket_count) <- list.try_map(record.buckets |> dict.to_list)
+    // See init_record
+    use #(le, bucket_count) <- list.map(record.buckets |> dict.to_list)
     case number.compare(value, le) {
-      Error(e) -> Error(NumberError(e))
-      Ok(order.Lt) | Ok(order.Eq) ->
-        Ok(#(le, number.add(bucket_count, number.int(1))))
-      Ok(order.Gt) -> Ok(#(le, bucket_count))
+      Error(_) -> panic as "found NaN bucket boundary"
+      Ok(order.Lt) | Ok(order.Eq) -> #(
+        le,
+        number.add(bucket_count, number.int(1)),
+      )
+      Ok(order.Gt) -> #(le, bucket_count)
     }
   }
-  use new_record_list <- result.map(r)
-  let new_record_buckets = dict.from_list(new_record_list)
+
+  let updated_buckets = dict.from_list(updated_buckets_list)
   let new_record =
     HistogramRecord(
       sum: number.add(record.sum, value),
       count: number.add(record.count, number.int(1)),
-      buckets: new_record_buckets,
+      buckets: updated_buckets,
     )
   Metric(..to, records: dict.insert(to.records, labels, new_record))
 }
 
 pub fn delete_record(
-  from from: Metric(Histogram, HistogramRecord),
+  from from: Metric(Histogram, HistogramRecord, Set(Number)),
   labels labels: LabelSet,
-) -> Metric(Histogram, HistogramRecord) {
+) -> Metric(Histogram, HistogramRecord, Set(Number)) {
   Metric(..from, records: dict.delete(from.records, labels))
 }
 
 pub fn print(
-  metric metric: Metric(Histogram, HistogramRecord),
+  metric metric: Metric(Histogram, HistogramRecord, Set(Number)),
   name name: metric.MetricName,
 ) -> String {
   let name = metric.name_to_string(name)

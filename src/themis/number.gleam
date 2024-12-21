@@ -6,6 +6,9 @@ pub type ComparisonError {
   NaNValue
 }
 
+/// Prometheus numbers.
+/// Helpful for displaying and adding/comparing values
+/// of different types.
 pub type Number {
   PosInf
   NegInf
@@ -59,6 +62,9 @@ pub fn compare(
   }
 }
 
+/// Add two numbers.
+/// Any `NaN` input value will always return `NaN`.
+/// `PosInf` + `NegInf` = `NaN`
 pub fn add(value1 val1: Number, value2 val2: Number) -> Number {
   case val1, val2 {
     NaN, _ | _, NaN -> NaN
@@ -72,6 +78,7 @@ pub fn add(value1 val1: Number, value2 val2: Number) -> Number {
   }
 }
 
+/// Prometheus-scrapable representation of a number
 pub fn print(number: Number) -> String {
   case number {
     Dec(val) -> float.to_string(val)

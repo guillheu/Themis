@@ -22,7 +22,7 @@ pub fn update_test() {
     gauge.new("my_metric", "A simple gauge for testing")
     |> should.be_ok
   metric
-  |> gauge.insert_record(
+  |> gauge.observe(
     label.new() |> label.add_label("foo", "bar") |> should.be_ok,
     number.Int(10),
   )
@@ -53,7 +53,7 @@ pub fn to_string_test() {
     "# HELP my_metric A simple gauge for testing\n# TYPE my_metric gauge\nmy_metric{foo=\"bar\"} 10\n",
   )
 
-  let create_record_labels =
+  let init_record_labels =
     label.new()
     |> label.add_label("foo", "bar")
     |> should.be_ok
@@ -63,7 +63,7 @@ pub fn to_string_test() {
     |> should.be_ok
 
   make_test_gauge(with_record: True)
-  |> gauge.insert_record(create_record_labels, number.Int(69))
+  |> gauge.observe(init_record_labels, number.Int(69))
   |> gauge.print("my_metric" |> metric.new_name([]) |> should.be_ok)
   |> should.equal(
     "# HELP my_metric A simple gauge for testing\n# TYPE my_metric gauge\nmy_metric{foo=\"bar\"} 10\nmy_metric{foo=\"bar\",toto=\"tata\",wibble=\"wobble\"} 69\n",
@@ -72,7 +72,7 @@ pub fn to_string_test() {
 
 fn make_test_gauge(
   with_record with_record: Bool,
-) -> metric.Metric(gauge.Gauge, number.Number) {
+) -> metric.Metric(gauge.Gauge, number.Number, Nil) {
   let records = case with_record {
     False -> dict.new()
     True -> {
@@ -80,5 +80,5 @@ fn make_test_gauge(
       dict.from_list([#(labels, number.Int(10))])
     }
   }
-  metric.Metric("A simple gauge for testing", records)
+  metric.Metric("A simple gauge for testing", records, Nil)
 }
