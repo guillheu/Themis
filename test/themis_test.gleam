@@ -96,7 +96,6 @@ pub fn store_histogram_record_test() {
     [#("toto", "tata"), #("wibble", "wobble")] |> dict.from_list
   let value1 = number.integer(1)
   let value2 = number.decimal(1.5)
-  let value3 = number.integer(100)
 
   let buckets = set.from_list([number.integer(1), number.integer(2)])
 
