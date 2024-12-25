@@ -1,5 +1,4 @@
 import gleam/dict
-import gleam/io
 import gleam/set
 import gleeunit/should
 import themis/histogram
@@ -23,8 +22,6 @@ pub fn new_test() {
     |> set.from_list
   histogram.new(store, "a_metric", "My first metric!", buckets)
   |> should.be_ok
-  |> should.equal("a_metric" |> metric.new_name([]) |> should.be_ok)
-
   histogram.new(store, "a_metric", "My first metric!", buckets)
   |> should.be_error
   |> should.equal(histogram.StoreError(store.MetricNameAlreadyExists))
@@ -41,9 +38,11 @@ pub fn new_test() {
 
 pub fn observe_test() {
   let store = store.init()
-  let name = "a_metric" |> metric.new_name([]) |> should.be_ok
+  let name = "a_metric"
   let #(bucket_name, count_name, sum_name) =
-    metric.make_histogram_metric_names(name)
+    metric.make_histogram_metric_names(
+      name |> metric.new_name([]) |> should.be_ok,
+    )
   let labels =
     [#("foo", "bar")] |> dict.from_list |> label.from_dict |> should.be_ok
 
@@ -62,14 +61,8 @@ pub fn observe_test() {
       number.decimal(1.0),
     ]
     |> set.from_list
-  histogram.new(
-    store,
-    name |> metric.name_to_string,
-    "My first metric!",
-    buckets,
-  )
+  histogram.new(store, name, "My first metric!", buckets)
   |> should.be_ok
-  |> should.equal(name)
   histogram.observe(store, name, labels, value1) |> should.be_ok
   store.match_records(store, bucket_name)
   |> should.be_ok

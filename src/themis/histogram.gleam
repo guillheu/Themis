@@ -27,7 +27,7 @@ pub fn new(
   name: String,
   description: String,
   buckets: Set(Number),
-) -> Result(MetricName, HistogramError) {
+) -> Result(Nil, HistogramError) {
   // Create a new metadata entry.
   // Return an error if the name is incorrect or already taken.
   // If it worked, return a MetricName which is the only way to
@@ -42,7 +42,7 @@ pub fn new(
         store.new_metric(store, metric_name, description, "histogram", buckets)
       {
         Error(e) -> Error(StoreError(e))
-        Ok(_) -> Ok(metric_name)
+        Ok(_) -> Ok(Nil)
       }
     }
   }
@@ -50,7 +50,7 @@ pub fn new(
 
 pub fn observe(
   store store: store.Store,
-  name name: MetricName,
+  name name: String,
   labels labels: LabelSet,
   value value: Number,
 ) -> Result(Nil, HistogramError) {
@@ -65,6 +65,11 @@ pub fn observe(
   // ets:select_replace for sum because it can be decimal
 
   // DON'T FORGET TO ADD THE DEFAULT +INF BUCKET!!!
+
+  use name <- result.try(
+    metric.new_name(name, blacklist)
+    |> result.try_recover(fn(e) { Error(MetricError(e)) }),
+  )
 
   let #(_description, _kind, buckets) = store.find_metric(store, name)
   // [
