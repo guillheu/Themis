@@ -1,107 +1,21 @@
-import gleam/bool
-import gleam/dict.{type Dict}
-import gleam/list
-import gleam/set.{type Set}
-import gleam/string_tree
-import themis/internal/label
-import themis/internal/metric.{type Metric, Metric}
-import themis/internal/metric/counter.{type Counter}
-import themis/internal/metric/gauge.{type Gauge}
-import themis/internal/metric/histogram.{type Histogram, type HistogramRecord}
-import themis/number.{type Number}
+import themis/internal/metric.{type MetricName}
+import themis/internal/store.{type Store}
 
-/// A Store manages a collection of metrics, ensuring unique metric names.
-pub type Store {
-  Store(
-    gauges: Dict(metric.MetricName, Metric(Gauge, Number, Nil)),
-    counters: Dict(metric.MetricName, Metric(Counter, Number, Nil)),
-    histograms: Dict(
-      metric.MetricName,
-      Metric(Histogram, HistogramRecord, Set(Number)),
-    ),
-  )
+pub fn init() -> Store {
+  store.init()
 }
 
-/// Represents possible errors that can occur when operating on the Store.
-pub type StoreError {
-  /// Returned when attempting to create a metric with a name that's already in use
-  MetricNameAlreadyInUse
-  /// Returned when attempting to operate on a metric that doesn't exist
-  MetricNameNotFound
-  /// Wraps errors related to metric name validation
-  MetricError(metric.MetricError)
-  /// Wraps errors related to label validation
-  LabelError(label.LabelError)
-  /// Wraps errors related to counters
-  CounterError(counter.CounterError)
-  /// Wraps errors related to counters
-  HistogramError(histogram.HistogramError)
+pub fn print(store store: Store) -> String {
+  todo
 }
 
-/// Creates a new empty metrics store.
-pub fn new() -> Store {
-  Store(gauges: dict.new(), counters: dict.new(), histograms: dict.new())
-}
-
-/// Formats all metrics in the store as a Prometheus-compatible text string.
-///
-/// ## Examples
-///
-/// ```gleam
-/// let metrics_text = print(store)
-/// // # HELP my_metric My first gauge
-/// // # TYPE my_metric gauge
-/// // my_metric{foo="bar"} 10
-/// // my_metric{toto="tata",wibble="wobble"} +Inf
-/// ```
-pub fn print(metrics_store store: Store) -> String {
-  print_gauges(store.gauges)
-  <> print_counters(store.counters)
-  <> print_histograms(store.histograms)
-}
-
-fn print_gauges(
-  gauges: Dict(metric.MetricName, Metric(Gauge, Number, Nil)),
-) -> String {
-  {
-    use current, name, gauge <- dict.fold(gauges, [])
-    [gauge.print(gauge, name) <> "\n", ..current]
-  }
-  |> list.reverse
-  |> string_tree.from_strings
-  |> string_tree.to_string
-}
-
-fn print_counters(
-  counters: Dict(metric.MetricName, Metric(Counter, Number, Nil)),
-) -> String {
-  {
-    use current, name, counter <- dict.fold(counters, [])
-    [counter.print(counter, name) <> "\n", ..current]
-  }
-  |> list.reverse
-  |> string_tree.from_strings
-  |> string_tree.to_string
-}
-
-fn print_histograms(
-  histograms: Dict(
-    metric.MetricName,
-    Metric(Histogram, HistogramRecord, Set(Number)),
-  ),
-) -> String {
-  {
-    use current, counter, name <- dict.fold(histograms, [])
-    [histogram.print(name, counter) <> "\n", ..current]
-  }
-  |> list.reverse
-  |> string_tree.from_strings
-  |> string_tree.to_string
-}
-
-pub fn is_metric_name_used(store: Store, name: metric.MetricName) -> Bool {
-  use <- bool.guard(dict.has_key(store.gauges, name), True)
-  use <- bool.guard(dict.has_key(store.counters, name), True)
-  use <- bool.guard(dict.has_key(store.histograms, name), True)
-  False
+pub fn is_metric_inserted(
+  store store: Store,
+  name name: String,
+) -> Result(MetricName, Nil) {
+  // Will first validate that the given string is a valid metric name
+  // then will lookup that metric metadata
+  // if found, return its metric name to then be used for gauge.observe etc
+  // if not found, error
+  todo
 }

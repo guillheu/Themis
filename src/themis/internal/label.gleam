@@ -43,6 +43,21 @@ pub fn new() -> LabelSet {
   LabelSet(dict.new())
 }
 
+pub fn to_dict(labels labels: LabelSet) -> Dict(String, String) {
+  labels.labels
+  |> dict.to_list
+  |> list.map(fn(label_entry) {
+    let #(label_name, label_value) = label_entry
+    #(label_name.name, label_value)
+  })
+  |> dict.from_list
+}
+
+pub fn to_strings(labels labels: LabelSet) -> List(String) {
+  use #(key, value) <- list.map(dict.to_list(labels.labels))
+  key.name <> ":" <> value
+}
+
 pub fn add_label(
   labels labels: LabelSet,
   new_label key: String,

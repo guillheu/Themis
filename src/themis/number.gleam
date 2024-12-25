@@ -45,8 +45,8 @@ pub fn not_a_number() -> Number {
 /// Compare two numbers (see gleam_stdlib/order)
 /// Will return an error if either value is NaN
 pub fn compare(
-  compare val1: Number,
-  to val2: Number,
+  to val1: Number,
+  compare val2: Number,
 ) -> Result(order.Order, ComparisonError) {
   case val1, val2 {
     v1, v2 if v1 == v2 -> Ok(order.Eq)
@@ -59,6 +59,15 @@ pub fn compare(
     Dec(d), Int(i) -> Ok(float.compare(d, int.to_float(i)))
     Int(i), Dec(d) -> Ok(float.compare(int.to_float(i), d))
     NaN, _ | _, NaN -> Error(NaNValue)
+  }
+}
+
+/// Compare two numbers (see gleam_stdlib/order)
+/// Will panic if either value is NaN
+pub fn unsafe_compare(compare val1: Number, to val2: Number) -> order.Order {
+  case compare(val1, val2) {
+    Error(_) -> panic as "cannot compare NaN"
+    Ok(r) -> r
   }
 }
 

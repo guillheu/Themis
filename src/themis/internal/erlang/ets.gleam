@@ -2,6 +2,7 @@ import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/erlang/atom.{type Atom}
 import gleam/erlang/process.{type Pid}
+import gleam/io
 import gleam/option.{type Option}
 import themis/number
 
@@ -76,6 +77,15 @@ pub fn insert(table: Table, key: key, value: value) -> Bool {
   do_insert(table, #(key, value) |> dynamic.from)
 }
 
+pub fn insert_new_raw(table: Table, object: Dynamic) -> Result(Nil, Nil) {
+  let r = do_insert_new(table, object)
+  case r |> dynamic.bool {
+    Error(_) -> Error(Nil)
+    Ok(True) -> Ok(Nil)
+    Ok(False) -> Error(Nil)
+  }
+}
+
 pub fn insert_many(table: Table, to_insert: Dict(key, value)) -> Bool {
   let objects =
     dict.to_list(to_insert)
@@ -83,11 +93,11 @@ pub fn insert_many(table: Table, to_insert: Dict(key, value)) -> Bool {
   do_insert(table, objects)
 }
 
-pub fn insert_raw(table: Table, object: Dynamic) -> Bool {
+pub fn insert_raw(table: Table, object: any) -> Bool {
   do_insert(table, object)
 }
 
-pub fn lookup(table: Table, key: key) -> List(#(Dynamic, Dynamic)) {
+pub fn lookup(table: Table, key: key) -> List(Dynamic) {
   do_lookup(table, key)
 }
 
@@ -108,6 +118,14 @@ pub fn counter_increment_by(table: Table, key: any, by: number.Number) -> Nil {
 pub fn counter_increment(table: Table, key: any) -> Nil {
   do_counter_increment_by(table, key, 1)
   Nil
+}
+
+pub fn match_metric(table: Table, kind: kind) -> List(Dynamic) {
+  do_match_metric(table, kind)
+}
+
+pub fn match_record(table: Table, name: String) -> List(Dynamic) {
+  do_match_record(table, name)
 }
 
 @external(erlang, "themis_external", "info")
@@ -134,11 +152,20 @@ fn do_info(
 @external(erlang, "ets", "insert")
 fn do_insert(table: Table, object_or_objects: any) -> Bool
 
+@external(erlang, "ets", "insert_new")
+fn do_insert_new(table: Table, object_or_objects: any) -> Dynamic
+
 @external(erlang, "ets", "lookup")
-fn do_lookup(table: Table, key: id) -> List(#(Dynamic, Dynamic))
+fn do_lookup(table: Table, key: id) -> List(Dynamic)
 
 @external(erlang, "themis_external", "counter_increment_by")
 fn do_counter_increment_by(table: Table, key: any, increment: Int) -> Nil
+
+@external(erlang, "themis_external", "match_metric")
+fn do_match_metric(table: Table, kind: kind) -> List(Dynamic)
+
+@external(erlang, "themis_external", "match_record")
+fn do_match_record(table: Table, name: String) -> List(Dynamic)
 
 @external(erlang, "themis_external", "counter_increment_by_decimal")
 fn do_counter_increment_by_decimal(
