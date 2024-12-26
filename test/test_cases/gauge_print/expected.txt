@@ -1,0 +1,13 @@
+
+# TYPE a_metric gauge
+# HELP a_metric My first metric!
+a_metric{foo="bar"} 0.11
+a_metric{wibble="wobble"} 0.11
+
+# TYPE another_metric gauge
+# HELP another_metric My second metric!
+another_metric{foo="bar"} 10
+
+# TYPE yet_another_metric gauge
+# HELP yet_another_metric My third metric!
+yet_another_metric{foo="bar"} 0.001
