@@ -2,7 +2,6 @@ import gleam/dict
 import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/process
-import gleam/io
 import gleam/list
 import gleam/option.{None}
 import gleeunit/should

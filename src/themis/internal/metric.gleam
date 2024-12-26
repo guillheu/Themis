@@ -1,13 +1,11 @@
-import gleam/dict.{type Dict}
 import gleam/function
 import gleam/list
 import gleam/regexp
 import gleam/result
 import gleam/string
-import themis/internal/label
 
 pub type MetricError {
-  InvalidMetricName
+  InvalidMetricName(name: String)
   InvalidWordInName(word: String)
 }
 
@@ -54,7 +52,7 @@ pub fn new_name(
   }
   use _ <- result.try(r)
   case is_valid_name(from) {
-    False -> Error(InvalidMetricName)
+    False -> Error(InvalidMetricName(from))
     True -> Ok(MetricName(from))
   }
 }

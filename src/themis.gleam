@@ -1,21 +1,29 @@
-import themis/internal/metric.{type MetricName}
+import gleam/result
+import themis/counter
+import themis/gauge
+import themis/histogram
 import themis/internal/store.{type Store}
+
+pub type ThemisError {
+  GaugeError(gauge.GaugeError)
+  HistogramError(histogram.HistogramError)
+  CounterError(counter.CounterError)
+}
 
 pub fn init() -> Store {
   store.init()
 }
 
-pub fn print(store store: Store) -> String {
-  todo
-}
-
-pub fn is_metric_inserted(
-  store store: Store,
-  name name: String,
-) -> Result(MetricName, Nil) {
-  // Will first validate that the given string is a valid metric name
-  // then will lookup that metric metadata
-  // if found, return its metric name to then be used for gauge.observe etc
-  // if not found, error
-  todo
+pub fn print(store store: Store) -> Result(String, ThemisError) {
+  use gauges_print <- result.try(
+    gauge.print_all(store) |> result.map_error(fn(e) { GaugeError(e) }),
+  )
+  use counters_print <- result.try(
+    counter.print_all(store) |> result.map_error(fn(e) { CounterError(e) }),
+  )
+  use histograms_print <- result.try(
+    histogram.print_all(store) |> result.map_error(fn(e) { HistogramError(e) }),
+  )
+  { gauges_print <> "\n" <> counters_print <> "\n" <> histograms_print }
+  |> Ok
 }

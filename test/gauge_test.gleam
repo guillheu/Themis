@@ -1,6 +1,4 @@
 import gleam/dict
-import gleam/io
-import gleam/set
 import gleeunit/should
 import simplifile
 import themis/gauge

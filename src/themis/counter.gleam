@@ -1,11 +1,8 @@
 import gleam/bool
-import gleam/dict.{type Dict}
-import gleam/float
-import gleam/int
+import gleam/dict
 import gleam/list
 import gleam/order
 import gleam/result
-import gleam/set.{type Set}
 import gleam/string
 import gleam/string_tree
 import themis/internal/label.{type LabelSet}

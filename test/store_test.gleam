@@ -1,7 +1,5 @@
 import gleam/dict
 import gleam/dynamic
-import gleam/erlang/atom
-import gleam/io
 import gleeunit/should
 import themis/internal/erlang/ets
 import themis/internal/label
