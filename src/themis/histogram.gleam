@@ -1,5 +1,5 @@
 import gleam/bool
-import gleam/dict
+import gleam/dict.{type Dict}
 import gleam/float
 import gleam/int
 import gleam/io
@@ -8,8 +8,9 @@ import gleam/order
 import gleam/result
 import gleam/set.{type Set}
 import gleam/string
+import gleam/string_tree
 import themis/internal/label.{type LabelSet}
-import themis/internal/metric.{type MetricName}
+import themis/internal/metric
 import themis/internal/store
 import themis/number.{type Number}
 
@@ -79,18 +80,7 @@ pub fn observe(
   //   "0.01",
   // ]
   // sorted, reversed
-  let le_labels =
-    list.map(buckets, fn(bucket) {
-      let assert Ok(bucket_decimal) = float.modulo(bucket, 1.0)
-      case bucket_decimal == 0.0 {
-        False -> number.decimal(bucket)
-        True -> number.integer(bucket |> float.truncate)
-      }
-    })
-    |> list.append([number.positive_infinity()])
-    |> list.sort(number.unsafe_compare)
-    |> list.reverse
-
+  let le_labels = buckets_floats_to_numbers(buckets)
   let #(bucket_name, count_name, sum_name) =
     metric.make_histogram_metric_names(name)
 
@@ -162,44 +152,148 @@ pub fn observe(
   Ok(Nil)
 }
 
-pub fn print_all(store store: store.Store) -> String {
-  // lookup all histogram metrics metadata.
-  //        The suffixes ARE included in the metric names stored in the table, and should be looked up manually:
-  //        get all histogram names with `ets:match({'$1', '$2', 'Histogram', '$3'})
-  //            -> $1 = metric name
-  //            -> $2 = description
-  //            -> $3 = buckets declaration
-  //        then get all necessary records: $1_bucket, $1_count, $1_sum:
-  // Loop through all found metric names...
-  // ======================================================
-  // get all buckets with ets:match({{name, '$1'}, '$2', '$3', HistogramBucket})
-  //            -> $1 = metric name (with suffix)
-  //            -> $2 = label set
-  //            -> $3 = INT value (all that should matter for buckets)
-  //            -> $4 = Float value (should be 0.0 for buckets)
-  // get all sums with ets:match({{name, '$2'}, '$3', '$4', HistogramSum})
-  // get all counts with ets:match({{name, '$2'}, '$3', '$4', HistogramCount})
-  // At this point we should have variables like this:
-  //        -> base_name: MetricName
-  //        -> sums: List(#(LabelSet, value: Int & Float))
-  //        -> count: List(#(LabelSet, value: Int & Float))
-  //        -> buckets: List(#(LabelSet, value: Int & Float))
-  // list.fold on all buckets :
-  //        -> buckets: Dict(LabelSet (without le), List(le: Number, value: Number)))
-  //            -> while you're at it ensure buckets are sorted by `le` order with `list.sort`
-  // list.fold on all sums:
-  //        -> sums: Dict(LabelSet, value: Number)
-  // list.fold on all counts:
-  //        -> counts: Dict(LabelSet, value: Number)
-  // ensure key sets between the buckets, sums and counts are the same
-  // dict.to_list, list.map and dict.from_list: combine buckets, sums and counts into a single dict of records:
-  //        -> records: Dict(LabelSet, #(count: Number, sum: Number, buckets: Dict(le: Number, value: Number)))
-  // ======================================================
-  // End of loop. Now we have records: Dict(MetricName, Dict(LabelSet, #(count: Number, sum: Number, buckets: Dict(le: Number, value: Number))))
+pub fn print_all(store store: store.Store) -> Result(String, HistogramError) {
+  use metrics <- result.try(
+    store.match_metrics(store, "histogram")
+    |> result.try_recover(fn(e) { Error(StoreError(e)) }),
+  )
+  let r = {
+    use metrics_strings, #(name_string, description, _buckets) <- list.try_fold(
+      metrics,
+      [],
+    )
+    use name <- result.try(
+      metric.new_name(name_string, blacklist)
+      |> result.try_recover(fn(e) { Error(MetricError(e)) }),
+    )
 
-  // Print all dis shit like we did before. ez. simple. simple.
+    let #(buckets_name, count_name, sum_name) =
+      metric.make_histogram_metric_names(name)
+    use bucket_records <- result.try(
+      store.match_records(store, buckets_name)
+      |> result.try_recover(fn(e) { Error(StoreError(e)) }),
+    )
+    use sum_records <- result.try(
+      store.match_records(store, sum_name)
+      |> result.try_recover(fn(e) { Error(StoreError(e)) }),
+    )
+    use count_records <- result.try(
+      store.match_records(store, count_name)
+      |> result.try_recover(fn(e) { Error(StoreError(e)) }),
+    )
 
-  todo
+    let records =
+      group_histogram_records(bucket_records, sum_records, count_records)
+
+    // Print all dis shit like we did before. ez. simple. simple.
+
+    let help_string = "# HELP " <> name_string <> " " <> description <> "\n"
+    let type_string = "# TYPE " <> name_string <> " " <> "histogram\n"
+    let records_strings = {
+      use lines, #(labels, #(buckets, sum, count)) <- list.fold(
+        dict.to_list(records),
+        [],
+      )
+      let sum_line =
+        { sum_name |> metric.name_to_string }
+        <> label.print(labels)
+        <> " "
+        <> number.print(sum)
+        <> "\n"
+      let count_line =
+        { count_name |> metric.name_to_string }
+        <> label.print(labels)
+        <> " "
+        <> number.print(count)
+        <> "\n"
+      let bucket_lines = {
+        use #(bucket_label, bucket_value) <- list.map(dict.to_list(buckets))
+        let bucket_labels =
+          label.add_label(labels, "le", bucket_label)
+          |> result.lazy_unwrap(fn() {
+            panic as {
+              "bucket label should be `le` and should not throw an error"
+            }
+          })
+        { buckets_name |> metric.name_to_string }
+        <> label.print(bucket_labels)
+        <> " "
+        <> number.print(bucket_value)
+        <> "\n"
+      }
+      ["\n", count_line, sum_line, ..bucket_lines] |> list.append(lines)
+    }
+
+    Ok([
+      "\n",
+      type_string,
+      help_string,
+      ..list.append(records_strings, metrics_strings)
+    ])
+  }
+  use metrics_strings <- result.map(r)
+  metrics_strings
+  // |> list.reverse
+  |> string_tree.from_strings
+  |> string_tree.to_string
+}
+
+// Fetching all the buckets, sums and counts from a metric name is easy
+// But reconstricting all record (set of buckets, a sum, a count) for
+// that metric is hard.
+// A "record" is essentially a Dict(labels, (record data))
+// for simpler metrics like gauge or counter, (record data) is just a single number.
+// But here, (record data) is : buckets, sum, count.
+// buckets: Dict(le,value) -> with `le` standing for "lesser equal". Sometimes it's a label, sometimes it's a string, sometimes it's a number.
+// sum: value
+// count: value
+// The records
+fn group_histogram_records(
+  buckets: Dict(LabelSet, Number),
+  sum: Dict(LabelSet, Number),
+  count: Dict(LabelSet, Number),
+  // Dict of labels, value = #(buckets, sum, count)
+) -> Dict(LabelSet, #(Dict(String, Number), Number, Number)) {
+  // 1: extract LE labels from buckets: Dict(LabelSet, Dict(String, Number))
+  buckets
+  |> dict.to_list
+  use result, bucket_entry <- list.fold(buckets |> dict.to_list(), dict.new())
+  let #(bucket_labels, bucket_value) = bucket_entry
+  let #(le_value, bucket_labels) =
+    label.to_dict(bucket_labels)
+    |> dict.to_list
+    |> list.key_pop("le")
+    |> result.lazy_unwrap(fn() {
+      panic as "could not find label `le` for bucket"
+    })
+  // TODO: might have to convert the le_value to number.Number,
+  // to properly sort the `le` values later, just to turn them back
+  // into strings later.
+  let labels =
+    bucket_labels
+    |> dict.from_list
+    |> label.from_dict
+    |> result.lazy_unwrap(fn() {
+      panic as "failed to recombine bucket labels after extracting le label"
+    })
+  let #(found_buckets, found_sum, found_count) = case dict.get(result, labels) {
+    Error(_) -> {
+      let record_sum_value =
+        dict.get(sum, labels)
+        |> result.lazy_unwrap(fn() {
+          panic as "recombined bucket labels did not match any found sum record"
+        })
+      let record_count_value =
+        dict.get(count, labels)
+        |> result.lazy_unwrap(fn() {
+          panic as "recombined bucket labels did not match any found count record"
+        })
+      #(dict.new(), record_sum_value, record_count_value)
+    }
+    Ok(record) -> record
+  }
+  let new_buckets = dict.insert(found_buckets, le_value, bucket_value)
+  dict.insert(result, labels, #(new_buckets, found_sum, found_count))
 }
 
 fn buckets_to_list_float(
@@ -214,4 +308,17 @@ fn buckets_to_list_float(
     }
   }
   |> result.all
+}
+
+fn buckets_floats_to_numbers(buckets: List(Float)) -> List(Number) {
+  list.map(buckets, fn(bucket) {
+    let assert Ok(bucket_decimal) = float.modulo(bucket, 1.0)
+    case bucket_decimal == 0.0 {
+      False -> number.decimal(bucket)
+      True -> number.integer(bucket |> float.truncate)
+    }
+  })
+  |> list.append([number.positive_infinity()])
+  |> list.sort(number.unsafe_compare)
+  |> list.reverse
 }

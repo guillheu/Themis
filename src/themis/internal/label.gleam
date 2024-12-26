@@ -1,4 +1,5 @@
 import gleam/dict.{type Dict}
+import gleam/io
 import gleam/list
 import gleam/regexp
 import gleam/result

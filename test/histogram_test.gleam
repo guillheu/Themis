@@ -1,6 +1,8 @@
 import gleam/dict
+import gleam/io
 import gleam/set
 import gleeunit/should
+import simplifile
 import themis/histogram
 import themis/internal/label
 import themis/internal/metric
@@ -350,4 +352,43 @@ pub fn observe_test() {
     ]
     |> dict.from_list,
   )
+}
+
+pub fn print_all_test() {
+  let assert Ok(expected) =
+    simplifile.read("test/test_cases/histogram_print/expected.txt")
+  let store = store.init()
+  let labels =
+    [#("foo", "bar")] |> dict.from_list |> label.from_dict |> should.be_ok
+  let labels2 =
+    [#("wibble", "wobble")] |> dict.from_list |> label.from_dict |> should.be_ok
+
+  let value1 = number.decimal(0.11)
+  let value2 = number.integer(10)
+  let value3 = number.decimal(0.001)
+
+  let buckets =
+    [
+      number.decimal(0.01),
+      number.decimal(0.025),
+      number.decimal(0.05),
+      number.decimal(0.1),
+      number.decimal(0.25),
+      number.decimal(0.5),
+      number.decimal(1.0),
+    ]
+    |> set.from_list
+  histogram.new(store, "a_metric", "My first metric!", buckets)
+  |> should.be_ok
+  histogram.new(store, "another_metric", "My second metric!", buckets)
+  |> should.be_ok
+  histogram.new(store, "yet_another_metric", "My third metric!", buckets)
+  |> should.be_ok
+  histogram.observe(store, "a_metric", labels, value1) |> should.be_ok
+  histogram.observe(store, "a_metric", labels, value2) |> should.be_ok
+  histogram.observe(store, "a_metric", labels2, value2) |> should.be_ok
+  histogram.observe(store, "another_metric", labels, value2) |> should.be_ok
+  histogram.observe(store, "yet_another_metric", labels, value3) |> should.be_ok
+
+  histogram.print_all(store) |> should.be_ok |> should.equal(expected)
 }

@@ -64,7 +64,7 @@ pub fn make_histogram_metric_names(
 ) -> #(MetricName, MetricName, MetricName) {
   let base_name = from.name
   #(
-    MetricName(base_name <> "_buckets"),
+    MetricName(base_name <> "_bucket"),
     MetricName(base_name <> "_count"),
     MetricName(base_name <> "_sum"),
   )
