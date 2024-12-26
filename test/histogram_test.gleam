@@ -64,7 +64,8 @@ pub fn observe_test() {
     |> set.from_list
   histogram.new(store, name, "My first metric!", buckets)
   |> should.be_ok
-  histogram.observe(store, name, labels, value1) |> should.be_ok
+  histogram.observe(store, name, labels |> label.to_dict, value1)
+  |> should.be_ok
   store.match_records(store, bucket_name)
   |> should.be_ok
   |> should.equal(
@@ -160,7 +161,8 @@ pub fn observe_test() {
     |> dict.from_list,
   )
 
-  histogram.observe(store, name, labels, value2) |> should.be_ok
+  histogram.observe(store, name, labels |> label.to_dict, value2)
+  |> should.be_ok
   store.match_records(store, bucket_name)
   |> should.be_ok
   |> should.equal(
@@ -256,7 +258,8 @@ pub fn observe_test() {
     |> dict.from_list,
   )
 
-  histogram.observe(store, name, labels, value3) |> should.be_ok
+  histogram.observe(store, name, labels |> label.to_dict, value3)
+  |> should.be_ok
   store.match_records(store, bucket_name)
   |> should.be_ok
   |> should.equal(
@@ -383,11 +386,21 @@ pub fn print_all_test() {
   |> should.be_ok
   histogram.new(store, "yet_another_metric", "My third metric!", buckets)
   |> should.be_ok
-  histogram.observe(store, "a_metric", labels, value1) |> should.be_ok
-  histogram.observe(store, "a_metric", labels, value2) |> should.be_ok
-  histogram.observe(store, "a_metric", labels2, value2) |> should.be_ok
-  histogram.observe(store, "another_metric", labels, value2) |> should.be_ok
-  histogram.observe(store, "yet_another_metric", labels, value3) |> should.be_ok
+  histogram.observe(store, "a_metric", labels |> label.to_dict, value1)
+  |> should.be_ok
+  histogram.observe(store, "a_metric", labels |> label.to_dict, value2)
+  |> should.be_ok
+  histogram.observe(store, "a_metric", labels2 |> label.to_dict, value2)
+  |> should.be_ok
+  histogram.observe(store, "another_metric", labels |> label.to_dict, value2)
+  |> should.be_ok
+  histogram.observe(
+    store,
+    "yet_another_metric",
+    labels |> label.to_dict,
+    value3,
+  )
+  |> should.be_ok
 
   histogram.print_all(store) |> should.be_ok |> should.equal(expected)
 }

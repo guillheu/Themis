@@ -18,6 +18,7 @@ pub type HistogramError {
   StoreError(store.StoreError)
   InvalidBucketValue
   CannotObserveNaN
+  LabelError(label.LabelError)
 }
 
 const blacklist = ["histogram"]
@@ -51,26 +52,18 @@ pub fn new(
 pub fn observe(
   store store: store.Store,
   name name: String,
-  labels labels: LabelSet,
+  labels labels: Dict(String, String),
   value value: Number,
 ) -> Result(Nil, HistogramError) {
   use <- bool.guard(value == number.NaN, Error(CannotObserveNaN))
-  // Observe a new record.
-  // Lookup the metric metadata, retrieve the bucket definitions
-  // Should increment all necessary buckets by 1
-  // as well as count
-  // and add to the sum.
-  // values can not be +Inf, -Inf or NaN.
-  // ets:counter_update for all selected buckets and count
-  // ets:select_replace for sum because it can be decimal
-
-  // DON'T FORGET TO ADD THE DEFAULT +INF BUCKET!!!
-
   use name <- result.try(
     metric.new_name(name, blacklist)
     |> result.try_recover(fn(e) { Error(MetricError(e)) }),
   )
 
+  use labels <- result.try(
+    label.from_dict(labels) |> result.map_error(fn(e) { LabelError(e) }),
+  )
   let #(_description, _kind, buckets) = store.find_metric(store, name)
   // [
   //   "+Inf",

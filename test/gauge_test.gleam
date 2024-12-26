@@ -30,27 +30,32 @@ pub fn observe_test() {
   let value4 = number.positive_infinity()
   let value5 = number.negative_infinity()
 
-  gauge.observe(store, "a_metric", labels, value1) |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value1)
+  |> should.be_ok
   store.match_records(store, "a_metric" |> metric.new_name([]) |> should.be_ok)
   |> should.be_ok
   |> should.equal([#(labels, value1)] |> dict.from_list)
 
-  gauge.observe(store, "a_metric", labels, value2) |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value2)
+  |> should.be_ok
   store.match_records(store, "a_metric" |> metric.new_name([]) |> should.be_ok)
   |> should.be_ok
   |> should.equal([#(labels, value2)] |> dict.from_list)
 
-  gauge.observe(store, "a_metric", labels, value3) |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value3)
+  |> should.be_ok
   store.match_records(store, "a_metric" |> metric.new_name([]) |> should.be_ok)
   |> should.be_ok
   |> should.equal([#(labels, value3)] |> dict.from_list)
 
-  gauge.observe(store, "a_metric", labels, value4) |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value4)
+  |> should.be_ok
   store.match_records(store, "a_metric" |> metric.new_name([]) |> should.be_ok)
   |> should.be_ok
   |> should.equal([#(labels, value4)] |> dict.from_list)
 
-  gauge.observe(store, "a_metric", labels, value5) |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value5)
+  |> should.be_ok
   store.match_records(store, "a_metric" |> metric.new_name([]) |> should.be_ok)
   |> should.be_ok
   |> should.equal([#(labels, value5)] |> dict.from_list)
@@ -75,11 +80,13 @@ pub fn print_all_test() {
   gauge.new(store, "yet_another_metric", "My third metric!")
   |> should.be_ok
 
-  gauge.observe(store, "a_metric", labels, value1) |> should.be_ok
-  gauge.observe(store, "a_metric", labels2, value1) |> should.be_ok
-  gauge.observe(store, "another_metric", labels, value2)
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value1)
   |> should.be_ok
-  gauge.observe(store, "yet_another_metric", labels, value3)
+  gauge.observe(store, "a_metric", labels2 |> label.to_dict, value1)
+  |> should.be_ok
+  gauge.observe(store, "another_metric", labels |> label.to_dict, value2)
+  |> should.be_ok
+  gauge.observe(store, "yet_another_metric", labels |> label.to_dict, value3)
   |> should.be_ok
 
   gauge.print_all(store) |> should.be_ok |> should.equal(expected)

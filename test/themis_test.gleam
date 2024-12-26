@@ -31,11 +31,16 @@ pub fn print_test() {
   let value4 = number.positive_infinity()
   let value5 = number.negative_infinity()
 
-  gauge.observe(store, "a_metric", labels, value1) |> should.be_ok
-  gauge.observe(store, "a_metric", labels, value2) |> should.be_ok
-  gauge.observe(store, "a_metric", labels, value3) |> should.be_ok
-  gauge.observe(store, "a_metric", labels, value4) |> should.be_ok
-  gauge.observe(store, "a_metric", labels, value5) |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value1)
+  |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value2)
+  |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value3)
+  |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value4)
+  |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value5)
+  |> should.be_ok
 
   let labels =
     [#("foo", "bar")] |> dict.from_list |> label.from_dict |> should.be_ok
@@ -52,12 +57,30 @@ pub fn print_test() {
   counter.new(store, "yet_another_metric_total", "My third metric!")
   |> should.be_ok
 
-  counter.increment_by(store, "a_metric_total", labels, value1) |> should.be_ok
-  counter.increment_by(store, "a_metric_total", labels2, value1) |> should.be_ok
-  counter.increment_by(store, "a_metric_total", labels, value2) |> should.be_ok
-  counter.increment_by(store, "another_metric_total", labels, value2)
+  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value1)
   |> should.be_ok
-  counter.increment_by(store, "yet_another_metric_total", labels, value3)
+  counter.increment_by(
+    store,
+    "a_metric_total",
+    labels2 |> label.to_dict,
+    value1,
+  )
+  |> should.be_ok
+  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value2)
+  |> should.be_ok
+  counter.increment_by(
+    store,
+    "another_metric_total",
+    labels |> label.to_dict,
+    value2,
+  )
+  |> should.be_ok
+  counter.increment_by(
+    store,
+    "yet_another_metric_total",
+    labels |> label.to_dict,
+    value3,
+  )
   |> should.be_ok
 
   let labels =
@@ -91,12 +114,25 @@ pub fn print_test() {
     buckets,
   )
   |> should.be_ok
-  histogram.observe(store, "a_history_metric", labels, value1) |> should.be_ok
-  histogram.observe(store, "a_history_metric", labels, value2) |> should.be_ok
-  histogram.observe(store, "a_history_metric", labels2, value2) |> should.be_ok
-  histogram.observe(store, "another_history_metric", labels, value2)
+  histogram.observe(store, "a_history_metric", labels |> label.to_dict, value1)
   |> should.be_ok
-  histogram.observe(store, "yet_another_history_metric", labels, value3)
+  histogram.observe(store, "a_history_metric", labels |> label.to_dict, value2)
+  |> should.be_ok
+  histogram.observe(store, "a_history_metric", labels2 |> label.to_dict, value2)
+  |> should.be_ok
+  histogram.observe(
+    store,
+    "another_history_metric",
+    labels |> label.to_dict,
+    value2,
+  )
+  |> should.be_ok
+  histogram.observe(
+    store,
+    "yet_another_history_metric",
+    labels |> label.to_dict,
+    value3,
+  )
   |> should.be_ok
 
   themis.print(store) |> should.be_ok |> should.equal(expected)

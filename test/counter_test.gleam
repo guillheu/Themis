@@ -31,17 +31,25 @@ pub fn increment_by_test() {
   let value2 = number.integer(10)
   let value3 = number.decimal(0.001)
 
-  counter.increment_by(store, "a_metric_total", labels, value1) |> should.be_ok
-  counter.increment_by(store, "a_metric_total", labels, value2) |> should.be_ok
-  counter.increment_by(store, "a_metric_total", labels, value3) |> should.be_ok
+  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value1)
+  |> should.be_ok
+  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value2)
+  |> should.be_ok
+  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value3)
+  |> should.be_ok
 
-  counter.increment_by(store, "a_metric_total", labels, number.not_a_number())
+  counter.increment_by(
+    store,
+    "a_metric_total",
+    labels |> label.to_dict,
+    number.not_a_number(),
+  )
   |> should.be_error
   |> should.equal(counter.InvalidIncrement(number.NaN))
   counter.increment_by(
     store,
     "a_metric_total",
-    labels,
+    labels |> label.to_dict,
     number.positive_infinity(),
   )
   |> should.be_error
@@ -49,7 +57,7 @@ pub fn increment_by_test() {
   counter.increment_by(
     store,
     "a_metric_total",
-    labels,
+    labels |> label.to_dict,
     number.negative_infinity(),
   )
   |> should.be_error
@@ -82,12 +90,30 @@ pub fn print_all_test() {
   counter.new(store, "yet_another_metric_total", "My third metric!")
   |> should.be_ok
 
-  counter.increment_by(store, "a_metric_total", labels, value1) |> should.be_ok
-  counter.increment_by(store, "a_metric_total", labels2, value1) |> should.be_ok
-  counter.increment_by(store, "a_metric_total", labels, value2) |> should.be_ok
-  counter.increment_by(store, "another_metric_total", labels, value2)
+  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value1)
   |> should.be_ok
-  counter.increment_by(store, "yet_another_metric_total", labels, value3)
+  counter.increment_by(
+    store,
+    "a_metric_total",
+    labels2 |> label.to_dict,
+    value1,
+  )
+  |> should.be_ok
+  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value2)
+  |> should.be_ok
+  counter.increment_by(
+    store,
+    "another_metric_total",
+    labels |> label.to_dict,
+    value2,
+  )
+  |> should.be_ok
+  counter.increment_by(
+    store,
+    "yet_another_metric_total",
+    labels |> label.to_dict,
+    value3,
+  )
   |> should.be_ok
 
   counter.print_all(store) |> should.be_ok |> should.equal(expected)

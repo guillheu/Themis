@@ -1,11 +1,11 @@
 import gleam/bool
-import gleam/dict
+import gleam/dict.{type Dict}
 import gleam/list
 import gleam/order
 import gleam/result
 import gleam/string
 import gleam/string_tree
-import themis/internal/label.{type LabelSet}
+import themis/internal/label
 import themis/internal/metric
 import themis/internal/store.{type Store}
 import themis/number.{type Number}
@@ -16,6 +16,7 @@ pub type CounterError {
   InvalidIncrement(value: Number)
   NegativeIncrement
   CounterNameShouldEndWithTotal
+  LabelError(label.LabelError)
 }
 
 const blacklist = ["counter"]
@@ -47,7 +48,7 @@ pub fn new(
 pub fn increment_by(
   store store: Store,
   name name: String,
-  labels labels: LabelSet,
+  labels labels: Dict(String, String),
   value value: Number,
 ) -> Result(Nil, CounterError) {
   use <- bool.guard(
@@ -66,6 +67,9 @@ pub fn increment_by(
     metric.new_name(name, blacklist)
     |> result.map_error(fn(e) { MetricError(e) }),
   )
+  use labels <- result.try(
+    label.from_dict(labels) |> result.map_error(fn(e) { LabelError(e) }),
+  )
   use store_error <- result.map_error(store.increment_record_by(
     store,
     name,
@@ -78,7 +82,7 @@ pub fn increment_by(
 pub fn increment(
   store store: Store,
   name name: String,
-  labels labels: LabelSet,
+  labels labels: Dict(String, String),
 ) -> Result(Nil, CounterError) {
   increment_by(store, name, labels, number.integer(1))
 }

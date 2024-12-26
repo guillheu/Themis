@@ -1,8 +1,8 @@
-import gleam/dict
+import gleam/dict.{type Dict}
 import gleam/list
 import gleam/result
 import gleam/string_tree
-import themis/internal/label.{type LabelSet}
+import themis/internal/label
 import themis/internal/metric
 import themis/internal/store.{type Store}
 import themis/number.{type Number}
@@ -10,6 +10,7 @@ import themis/number.{type Number}
 pub type GaugeError {
   MetricError(metric.MetricError)
   StoreError(store.StoreError)
+  LabelError(label.LabelError)
 }
 
 const blacklist = ["gauge"]
@@ -37,12 +38,15 @@ pub fn new(
 pub fn observe(
   store store: Store,
   name name: String,
-  labels labels: LabelSet,
+  labels labels: Dict(String, String),
   value value: Number,
 ) -> Result(Nil, GaugeError) {
   use name <- result.try(
     metric.new_name(name, blacklist)
     |> result.map_error(fn(e) { MetricError(e) }),
+  )
+  use labels <- result.try(
+    label.from_dict(labels) |> result.map_error(fn(e) { LabelError(e) }),
   )
   use store_error <- result.map_error(store.insert_record(
     store,
