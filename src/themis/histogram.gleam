@@ -2,7 +2,6 @@ import gleam/bool
 import gleam/dict.{type Dict}
 import gleam/float
 import gleam/int
-import gleam/io
 import gleam/list
 import gleam/order
 import gleam/result
@@ -24,10 +23,10 @@ pub type HistogramError {
 const blacklist = ["histogram"]
 
 pub fn new(
-  store: store.Store,
-  name: String,
-  description: String,
-  buckets: Set(Number),
+  store store: store.Store,
+  name name: String,
+  description description: String,
+  buckets buckets: Set(Number),
 ) -> Result(Nil, HistogramError) {
   // Create a new metadata entry.
   // Return an error if the name is incorrect or already taken.
