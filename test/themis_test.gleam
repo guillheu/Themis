@@ -1,163 +1,162 @@
-// import internal/metric/counter
 import gleam/dict
-import gleam/io
 import gleam/set
 import gleeunit
 import gleeunit/should
+import simplifile
 import themis
 import themis/counter
 import themis/gauge
 import themis/histogram
+import themis/internal/label
+import themis/internal/store
 import themis/number
 
 pub fn main() {
   gleeunit.main()
 }
 
-pub fn store_gauge_record_test() {
-  let labels = [#("foo", "bar")] |> dict.from_list
-  let other_labels =
-    [#("toto", "tata"), #("wibble", "wobble")] |> dict.from_list
-  let value = number.int(10)
-  let new_value = number.pos_inf()
-  let store =
-    themis.new()
-    |> gauge.register("my_metric", "My first gauge")
-    |> should.be_ok
-    |> gauge.insert_record("my_metric", labels, value)
-    |> should.be_ok
-    |> gauge.insert_record("my_metric", other_labels, value)
-    |> should.be_ok
-
-  store
-  |> themis.print
-  |> should.equal(
-    "# HELP my_metric My first gauge\n# TYPE my_metric gauge\nmy_metric{foo=\"bar\"} 10\nmy_metric{toto=\"tata\",wibble=\"wobble\"} 10\n\n",
-  )
-  // # HELP my_metric My first gauge
-  // # TYPE my_metric gauge
-  // my_metric{foo="bar"} 10
-  // my_metric{toto="tata",wibble="wobble"} 10
-
-  store
-  |> gauge.insert_record("my_metric", other_labels, new_value)
+pub fn print_test() {
+  let assert Ok(expected) =
+    simplifile.read("test/test_cases/all_print/expected.txt")
+  let store = store.init()
+  gauge.new(store, "a_metric", "My first metric!")
   |> should.be_ok
-  |> themis.print
-  |> should.equal(
-    "# HELP my_metric My first gauge\n# TYPE my_metric gauge\nmy_metric{foo=\"bar\"} 10\nmy_metric{toto=\"tata\",wibble=\"wobble\"} +Inf\n\n",
+
+  let labels =
+    [#("foo", "bar")] |> dict.from_list |> label.from_dict |> should.be_ok
+
+  let value1 = number.decimal(0.11)
+  let value2 = number.integer(10)
+  let value3 = number.not_a_number()
+  let value4 = number.positive_infinity()
+  let value5 = number.negative_infinity()
+
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value1)
+  |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value2)
+  |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value3)
+  |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value4)
+  |> should.be_ok
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value5)
+  |> should.be_ok
+
+  let labels =
+    [#("foo", "bar")] |> dict.from_list |> label.from_dict |> should.be_ok
+  let labels2 =
+    [#("wibble", "wobble")] |> dict.from_list |> label.from_dict |> should.be_ok
+
+  let value1 = number.decimal(0.11)
+  let value2 = number.integer(10)
+  let value3 = number.decimal(0.001)
+  counter.new(store, "a_metric_total", "My first metric!")
+  |> should.be_ok
+  counter.new(store, "another_metric_total", "My second metric!")
+  |> should.be_ok
+  counter.new(store, "yet_another_metric_total", "My third metric!")
+  |> should.be_ok
+
+  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value1)
+  |> should.be_ok
+  counter.increment_by(
+    store,
+    "a_metric_total",
+    labels2 |> label.to_dict,
+    value1,
   )
-  // # HELP my_metric My first gauge
-  // # TYPE my_metric gauge
-  // my_metric{foo="bar"} 10
-  // my_metric{toto="tata",wibble="wobble"} +Inf
+  |> should.be_ok
+  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value2)
+  |> should.be_ok
+  counter.increment_by(
+    store,
+    "another_metric_total",
+    labels |> label.to_dict,
+    value2,
+  )
+  |> should.be_ok
+  counter.increment_by(
+    store,
+    "yet_another_metric_total",
+    labels |> label.to_dict,
+    value3,
+  )
+  |> should.be_ok
+
+  let labels =
+    [#("foo", "bar")] |> dict.from_list |> label.from_dict |> should.be_ok
+  let labels2 =
+    [#("wibble", "wobble")] |> dict.from_list |> label.from_dict |> should.be_ok
+
+  let value1 = number.decimal(0.11)
+  let value2 = number.integer(10)
+  let value3 = number.decimal(0.001)
+
+  let buckets =
+    [
+      number.decimal(0.01),
+      number.decimal(0.025),
+      number.decimal(0.05),
+      number.decimal(0.1),
+      number.decimal(0.25),
+      number.decimal(0.5),
+      number.decimal(1.0),
+    ]
+    |> set.from_list
+  histogram.new(store, "a_history_metric", "My first metric!", buckets)
+  |> should.be_ok
+  histogram.new(store, "another_history_metric", "My second metric!", buckets)
+  |> should.be_ok
+  histogram.new(
+    store,
+    "yet_another_history_metric",
+    "My third metric!",
+    buckets,
+  )
+  |> should.be_ok
+  histogram.observe(store, "a_history_metric", labels |> label.to_dict, value1)
+  |> should.be_ok
+  histogram.observe(store, "a_history_metric", labels |> label.to_dict, value2)
+  |> should.be_ok
+  histogram.observe(store, "a_history_metric", labels2 |> label.to_dict, value2)
+  |> should.be_ok
+  histogram.observe(
+    store,
+    "another_history_metric",
+    labels |> label.to_dict,
+    value2,
+  )
+  |> should.be_ok
+  histogram.observe(
+    store,
+    "yet_another_history_metric",
+    labels |> label.to_dict,
+    value3,
+  )
+  |> should.be_ok
+
+  themis.print(store) |> should.be_ok |> should.equal(expected)
 }
 
-pub fn store_counter_record_test() {
-  let labels = [#("foo", "bar")] |> dict.from_list
-  let other_labels =
-    [#("toto", "tata"), #("wibble", "wobble")] |> dict.from_list
-  let increment_by = number.int(10)
-  // let new_value = number.pos_inf()
-  let store =
-    themis.new()
-    |> counter.register("my_metric", "My first counter")
-    |> should.be_ok
-    |> counter.create_record("my_metric", labels)
-    |> should.be_ok
-    |> counter.increment_record("my_metric", labels)
-    |> should.be_ok
-    |> counter.create_record("my_metric", other_labels)
-    |> should.be_ok
-
-  store
-  |> themis.print
-  // |> io.debug
-  |> should.equal(
-    "# HELP my_metric_total My first counter\n# TYPE my_metric_total counter\nmy_metric_total{foo=\"bar\"} 1\nmy_metric_total{toto=\"tata\",wibble=\"wobble\"} 0\n\n",
-  )
-
-  // # HELP my_metric_total My first counter
-  // # TYPE my_metric_total counter
-  // my_metric_total{foo="bar"} 1
-  // my_metric_total{toto="tata",wibble="wobble"} 0
-
-  store
-  |> counter.increment_record_by("my_metric", other_labels, increment_by)
+pub fn observe_collision_test() {
+  let store = store.init()
+  gauge.new(store, "a_metric", "My first metric!")
   |> should.be_ok
-  |> themis.print
-  |> should.equal(
-    "# HELP my_metric_total My first counter\n# TYPE my_metric_total counter\nmy_metric_total{foo=\"bar\"} 1\nmy_metric_total{toto=\"tata\",wibble=\"wobble\"} 10\n\n",
-  )
-  // # HELP my_metric_total My first counter
-  // # TYPE my_metric_total counter
-  // my_metric_total{foo="bar"} 1
-  // my_metric_total{toto="tata",wibble="wobble"} 10
-}
-
-pub fn store_histogram_record_test() {
-  let labels = [#("foo", "bar")] |> dict.from_list
-  let other_labels =
-    [#("toto", "tata"), #("wibble", "wobble")] |> dict.from_list
-  let value1 = number.int(1)
-  let value2 = number.dec(1.5)
-  let value3 = number.int(100)
-
-  let thresholds = set.from_list([number.int(1), number.int(2)])
-  let other_thresholds = set.from_list([number.int(10), number.dec(66.6)])
-
-  let store =
-    themis.new()
-    |> histogram.register("my_metric", "My first histogram")
-    |> should.be_ok
-    |> histogram.create_record("my_metric", labels, thresholds)
-    |> should.be_ok
-    |> histogram.create_record("my_metric", other_labels, other_thresholds)
-    |> should.be_ok
-    |> histogram.measure("my_metric", labels, value1)
-    |> should.be_ok
-    |> histogram.measure("my_metric", labels, value2)
-    |> should.be_ok
-    |> histogram.measure("my_metric", other_labels, value3)
-    |> should.be_ok
-
-  store
-  |> themis.print
-  |> should.equal(
-    "# HELP my_metric My first histogram\n# TYPE my_metric histogram\nmy_metric_bucket{foo=\"bar\",le=\"1\"} 1\nmy_metric_bucket{foo=\"bar\",le=\"2\"} 2\nmy_metric_bucket{foo=\"bar\",le=\"+Inf\"} 2\nmy_metric_sum{foo=\"bar\"} 2\nmy_metric_count{foo=\"bar\"} 2\n\nmy_metric_bucket{le=\"10\",toto=\"tata\",wibble=\"wobble\"} 0\nmy_metric_bucket{le=\"66.6\",toto=\"tata\",wibble=\"wobble\"} 0\nmy_metric_bucket{le=\"+Inf\",toto=\"tata\",wibble=\"wobble\"} 1\nmy_metric_sum{toto=\"tata\",wibble=\"wobble\"} 1\nmy_metric_count{toto=\"tata\",wibble=\"wobble\"} 1\n\n\n",
-  )
-
-  // # HELP my_metric My first histogram
-  // # TYPE my_metric histogram
-  // my_metric_bucket{foo="bar",le="1"} 1
-  // my_metric_bucket{foo="bar",le="2"} 2
-  // my_metric_bucket{foo="bar",le="+Inf"} 2
-  // my_metric_sum{foo="bar"} 2
-  // my_metric_count{foo="bar"} 2
-
-  // my_metric_bucket{le="10",toto="tata",wibble="wobble"} 0
-  // my_metric_bucket{le="66.6",toto="tata",wibble="wobble"} 0
-  // my_metric_bucket{le="+Inf",toto="tata",wibble="wobble"} 1
-  // my_metric_sum{toto="tata",wibble="wobble"} 1
-  // my_metric_count{toto="tata",wibble="wobble"} 1
-
-  store
-  |> histogram.measure("my_metric", other_labels, value1)
+  counter.new(store, "another_metric_total", "My first metric!")
   |> should.be_ok
-  |> themis.print
-  |> should.equal(
-    "# HELP my_metric My first histogram\n# TYPE my_metric histogram\nmy_metric_bucket{foo=\"bar\",le=\"1\"} 1\nmy_metric_bucket{foo=\"bar\",le=\"2\"} 2\nmy_metric_bucket{foo=\"bar\",le=\"+Inf\"} 2\nmy_metric_sum{foo=\"bar\"} 2\nmy_metric_count{foo=\"bar\"} 2\n\nmy_metric_bucket{le=\"10\",toto=\"tata\",wibble=\"wobble\"} 1\nmy_metric_bucket{le=\"66.6\",toto=\"tata\",wibble=\"wobble\"} 1\nmy_metric_bucket{le=\"+Inf\",toto=\"tata\",wibble=\"wobble\"} 2\nmy_metric_sum{toto=\"tata\",wibble=\"wobble\"} 2\nmy_metric_count{toto=\"tata\",wibble=\"wobble\"} 2\n\n\n",
-  )
-  // # HELP my_metric My first histogram
-  // # TYPE my_metric histogram
-  // my_metric_bucket{foo="bar",le="1"} 1
-  // my_metric_bucket{foo="bar",le="2"} 2
-  // my_metric_bucket{foo="bar",le="+Inf"} 2
-  // my_metric_sum{foo="bar"} 2
-  // my_metric_count{foo="bar"} 2
 
-  // my_metric_bucket{le="10",toto="tata",wibble="wobble"} 1
-  // my_metric_bucket{le="66.6",toto="tata",wibble="wobble"} 1
-  // my_metric_bucket{le="+Inf",toto="tata",wibble="wobble"} 2
-  // my_metric_sum{toto="tata",wibble="wobble"} 2
-  // my_metric_count{toto="tata",wibble="wobble"} 2
+  histogram.observe(store, "a_metric", dict.new(), number.integer(1))
+  // Should not be able to set a gauge as a histogram
+  |> should.be_error
+  |> should.equal(histogram.StoreError(store.InvalidType))
+
+  counter.increment(store, "a_metric_total", dict.new())
+  // Should not be able to set a gauge as a histogram
+  |> should.be_error
+  |> should.equal(counter.StoreError(store.MetricNotFound))
+  // |> should.equal(histogram.StoreError(store.InvalidType))
+
+  gauge.observe(store, "another_metric_total", dict.new(), number.integer(10))
+  |> should.be_error
+  |> should.equal(gauge.StoreError(store.InvalidType))
 }

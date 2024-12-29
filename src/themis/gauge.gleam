@@ -1,108 +1,111 @@
-import gleam/bool
 import gleam/dict.{type Dict}
+import gleam/list
 import gleam/result
-import internal/label
-import internal/metric/gauge
-import themis.{
-  type Store, type StoreError, LabelError, MetricError, MetricNameNotFound,
-  Store,
-}
+import gleam/string_tree
+import themis/internal/label
+import themis/internal/metric
+import themis/internal/store.{type Store}
 import themis/number.{type Number}
 
+pub type GaugeError {
+  MetricError(metric.MetricError)
+  StoreError(store.StoreError)
+  LabelError(label.LabelError)
+}
+
+const blacklist = ["gauge"]
+
 /// Registers a new gauge metric to the store.
-///
-/// ## Arguments
-///
-/// - `store`: The metrics store to add the gauge to
-/// - `name`: The name of the gauge metric (must be a valid Prometheus metric name)
-/// - `description`: A human-readable description of what the gauge measures
-///
-/// ## Examples
-///
-/// ```gleam
-/// let assert Ok(store) = register(
-///   store,
-///   "process_cpu_seconds_total",
-///   "Total user and system CPU time spent in seconds",
-/// )
-/// ```
-pub fn register(
+/// Will return an error if the metric name is invalid
+/// or already used by another metric.
+pub fn new(
   store store: Store,
-  name name_string: String,
+  name name: String,
   description description: String,
-) -> Result(Store, StoreError) {
-  use #(name, gauge) <- result.map(
-    gauge.new(name_string, description)
+) -> Result(Nil, GaugeError) {
+  use name <- result.try(
+    metric.new_name(name, blacklist)
     |> result.try_recover(fn(e) { Error(MetricError(e)) }),
   )
-  Store(..store, gauges: dict.insert(store.gauges, name, gauge))
+  let buckets = []
+  use store_error <- result.try_recover(store.new_metric(
+    store,
+    name,
+    description,
+    "gauge",
+    buckets,
+  ))
+  Error(StoreError(store_error))
 }
 
-/// Records a value for a gauge metric with the given labels.
-///
-/// ## Arguments
-///
-/// - `store`: The metrics store containing the gauge
-/// - `gauge_name`: The name of the gauge to record a value for
-/// - `labels`: A dictionary of labels
-/// - `value`: The numeric value to record
-///
-/// ## Examples
-///
-/// ```gleam
-/// let labels = dict.from_list([#("instance", "localhost:9090")])
-/// let assert Ok(store) = insert_gauge_record(
-///   store,
-///   "process_cpu_seconds_total",
-///   labels,
-///   int(42),
-/// )
-/// ```
-pub fn insert_record(
+/// Sets a gauge value for the given metric name.
+/// Will return an error if the name is invalid, not a registered metric
+/// or not of the correct metric type.
+/// Will return an error if any of the labels have an invalid key.
+/// NaN, PosInf and NegInf values are valid but not recommended.
+pub fn observe(
   store store: Store,
-  gauge_name name_string: String,
-  labels labels_dict: Dict(String, String),
+  name name: String,
+  labels labels: Dict(String, String),
   value value: Number,
-) -> Result(Store, StoreError) {
-  use labels <- result.try(
-    label.from_dict(labels_dict)
-    |> result.try_recover(fn(e) { Error(LabelError(e)) }),
-  )
+) -> Result(Nil, GaugeError) {
   use name <- result.try(
-    gauge.new_name(name_string)
-    |> result.try_recover(fn(e) { Error(MetricError(e)) }),
+    metric.new_name(name, blacklist)
+    |> result.map_error(fn(e) { MetricError(e) }),
   )
-  use gauge <- result.try(
-    dict.get(store.gauges, name) |> result.replace_error(MetricNameNotFound),
+  use _ <- result.try(
+    store.find_metric(store, name, "gauge")
+    |> result.map_error(fn(e) { StoreError(e) }),
   )
-  let updated_gauge = gauge.insert_record(gauge, labels, value)
-  Ok(Store(..store, gauges: dict.insert(store.gauges, name, updated_gauge)))
+  use labels <- result.try(
+    label.from_dict(labels) |> result.map_error(fn(e) { LabelError(e) }),
+  )
+  use store_error <- result.map_error(store.insert_record(
+    store,
+    name,
+    labels,
+    value,
+  ))
+  StoreError(store_error)
 }
 
-/// Removes a gauge metric and all its recorded values from the store.
-///
-/// ## Arguments
-///
-/// - `store`: The metrics store containing the gauge
-/// - `gauge_name`: The name of the gauge to delete
-///
-/// ## Examples
-///
-/// ```gleam
-/// let assert Ok(store) = unregister(store, "process_cpu_seconds_total")
-/// ```
-pub fn unregister(
-  store store: Store,
-  gauge_name name_string: String,
-) -> Result(Store, StoreError) {
-  use name <- result.try(
-    gauge.new_name(name_string)
-    |> result.try_recover(fn(e) { Error(MetricError(e)) }),
+pub fn print(store store: Store) -> Result(String, GaugeError) {
+  use metrics <- result.try(
+    store.match_metrics(store, "gauge")
+    |> result.try_recover(fn(e) { Error(StoreError(e)) }),
   )
-  use <- bool.guard(
-    !dict.has_key(store.gauges, name),
-    Error(MetricNameNotFound),
-  )
-  let new_gauges = dict.delete(store.gauges, name)
-  Ok(Store(..store, gauges: new_gauges))
+  let r = {
+    use metrics_strings, #(name_string, description, _buckets) <- list.try_fold(
+      metrics,
+      [],
+    )
+    use name <- result.try(
+      metric.new_name(name_string, [])
+      |> result.map_error(fn(e) { MetricError(e) }),
+    )
+    use metric_records <- result.try(
+      store.match_records(store, name)
+      |> result.map_error(fn(e) { StoreError(e) }),
+    )
+    let help_string = "# HELP " <> name_string <> " " <> description <> "\n"
+    let type_string = "# TYPE " <> name_string <> " " <> "gauge\n"
+    let records_strings =
+      dict.to_list(metric_records)
+      |> list.map(fn(record) {
+        let #(labels, value) = record
+        name_string <> label.print(labels) <> " " <> number.print(value) <> "\n"
+      })
+
+    Ok([
+      "\n",
+      type_string,
+      help_string,
+      ..list.append(records_strings, metrics_strings)
+    ])
+  }
+
+  use metrics_strings <- result.map(r)
+  metrics_strings
+  |> string_tree.from_strings
+  |> string_tree.to_string
 }

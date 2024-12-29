@@ -1,84 +1,93 @@
 import gleam/dict
 import gleeunit/should
-import internal/label
-import internal/metric
-import internal/metric/gauge
+import simplifile
+import themis/gauge
+import themis/internal/label
+import themis/internal/metric
+import themis/internal/store
 import themis/number
 
-pub fn create_test() {
-  let expected = make_test_gauge(with_record: False)
-
-  let #(_name, metric) =
-    gauge.new("my_metric", "A simple gauge for testing") |> should.be_ok
-
-  metric
-  |> should.equal(expected)
+pub fn new_test() {
+  let store = store.init()
+  gauge.new(store, "a_metric", "My first metric!")
+  |> should.be_ok
+  gauge.new(store, "a_metric", "My second metric!")
+  |> should.be_error
+  |> should.equal(gauge.StoreError(store.MetricNameAlreadyExists))
 }
 
-pub fn update_test() {
-  let expected = make_test_gauge(with_record: True)
+pub fn observe_test() {
+  let store = store.init()
+  gauge.new(store, "a_metric", "My first metric!")
+  |> should.be_ok
 
-  let #(_name, metric) =
-    gauge.new("my_metric", "A simple gauge for testing")
-    |> should.be_ok
-  metric
-  |> gauge.insert_record(
-    label.new() |> label.add_label("foo", "bar") |> should.be_ok,
-    number.Int(10),
-  )
-  |> should.equal(expected)
+  let labels =
+    [#("foo", "bar")] |> dict.from_list |> label.from_dict |> should.be_ok
+
+  let value1 = number.decimal(0.11)
+  let value2 = number.integer(10)
+  let value3 = number.not_a_number()
+  let value4 = number.positive_infinity()
+  let value5 = number.negative_infinity()
+
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value1)
+  |> should.be_ok
+  store.match_records(store, "a_metric" |> metric.new_name([]) |> should.be_ok)
+  |> should.be_ok
+  |> should.equal([#(labels, value1)] |> dict.from_list)
+
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value2)
+  |> should.be_ok
+  store.match_records(store, "a_metric" |> metric.new_name([]) |> should.be_ok)
+  |> should.be_ok
+  |> should.equal([#(labels, value2)] |> dict.from_list)
+
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value3)
+  |> should.be_ok
+  store.match_records(store, "a_metric" |> metric.new_name([]) |> should.be_ok)
+  |> should.be_ok
+  |> should.equal([#(labels, value3)] |> dict.from_list)
+
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value4)
+  |> should.be_ok
+  store.match_records(store, "a_metric" |> metric.new_name([]) |> should.be_ok)
+  |> should.be_ok
+  |> should.equal([#(labels, value4)] |> dict.from_list)
+
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value5)
+  |> should.be_ok
+  store.match_records(store, "a_metric" |> metric.new_name([]) |> should.be_ok)
+  |> should.be_ok
+  |> should.equal([#(labels, value5)] |> dict.from_list)
 }
 
-pub fn delete_test() {
-  let expected = make_test_gauge(with_record: False)
-  let from = make_test_gauge(with_record: True)
+pub fn print_test() {
+  let assert Ok(expected) =
+    simplifile.read("test/test_cases/gauge_print/expected.txt")
+  let store = store.init()
+  let labels =
+    [#("foo", "bar")] |> dict.from_list |> label.from_dict |> should.be_ok
+  let labels2 =
+    [#("wibble", "wobble")] |> dict.from_list |> label.from_dict |> should.be_ok
 
-  let labels = label.new() |> label.add_label("foo", "bar") |> should.be_ok
+  let value1 = number.decimal(0.11)
+  let value2 = number.integer(10)
+  let value3 = number.decimal(0.001)
+  gauge.new(store, "a_metric", "My first metric!")
+  |> should.be_ok
+  gauge.new(store, "another_metric", "My second metric!")
+  |> should.be_ok
+  gauge.new(store, "yet_another_metric", "My third metric!")
+  |> should.be_ok
 
-  from
-  |> gauge.delete_record(labels)
-  |> should.equal(expected)
-}
+  gauge.observe(store, "a_metric", labels |> label.to_dict, value1)
+  |> should.be_ok
+  gauge.observe(store, "a_metric", labels2 |> label.to_dict, value1)
+  |> should.be_ok
+  gauge.observe(store, "another_metric", labels |> label.to_dict, value2)
+  |> should.be_ok
+  gauge.observe(store, "yet_another_metric", labels |> label.to_dict, value3)
+  |> should.be_ok
 
-pub fn to_string_test() {
-  make_test_gauge(with_record: False)
-  |> gauge.print("my_metric" |> metric.new_name([]) |> should.be_ok)
-  |> should.equal(
-    "# HELP my_metric A simple gauge for testing\n# TYPE my_metric gauge\n",
-  )
-
-  make_test_gauge(with_record: True)
-  |> gauge.print("my_metric" |> metric.new_name([]) |> should.be_ok)
-  |> should.equal(
-    "# HELP my_metric A simple gauge for testing\n# TYPE my_metric gauge\nmy_metric{foo=\"bar\"} 10\n",
-  )
-
-  let create_record_labels =
-    label.new()
-    |> label.add_label("foo", "bar")
-    |> should.be_ok
-    |> label.add_label("toto", "tata")
-    |> should.be_ok
-    |> label.add_label("wibble", "wobble")
-    |> should.be_ok
-
-  make_test_gauge(with_record: True)
-  |> gauge.insert_record(create_record_labels, number.Int(69))
-  |> gauge.print("my_metric" |> metric.new_name([]) |> should.be_ok)
-  |> should.equal(
-    "# HELP my_metric A simple gauge for testing\n# TYPE my_metric gauge\nmy_metric{foo=\"bar\"} 10\nmy_metric{foo=\"bar\",toto=\"tata\",wibble=\"wobble\"} 69\n",
-  )
-}
-
-fn make_test_gauge(
-  with_record with_record: Bool,
-) -> metric.Metric(gauge.Gauge, number.Number) {
-  let records = case with_record {
-    False -> dict.new()
-    True -> {
-      let labels = label.new() |> label.add_label("foo", "bar") |> should.be_ok
-      dict.from_list([#(labels, number.Int(10))])
-    }
-  }
-  metric.Metric("A simple gauge for testing", records)
+  gauge.print(store) |> should.be_ok |> should.equal(expected)
 }

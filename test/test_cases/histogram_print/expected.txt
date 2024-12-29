@@ -1,0 +1,53 @@
+
+# TYPE a_metric histogram
+# HELP a_metric My first metric!
+
+a_metric_count{wibble="wobble"} 1
+a_metric_sum{wibble="wobble"} 10
+a_metric_bucket{le="+Inf",wibble="wobble"} 1
+a_metric_bucket{le="0.01",wibble="wobble"} 0
+a_metric_bucket{le="0.025",wibble="wobble"} 0
+a_metric_bucket{le="0.05",wibble="wobble"} 0
+a_metric_bucket{le="0.1",wibble="wobble"} 0
+a_metric_bucket{le="0.25",wibble="wobble"} 0
+a_metric_bucket{le="0.5",wibble="wobble"} 0
+a_metric_bucket{le="1",wibble="wobble"} 0
+
+a_metric_count{foo="bar"} 2
+a_metric_sum{foo="bar"} 10.11
+a_metric_bucket{foo="bar",le="+Inf"} 2
+a_metric_bucket{foo="bar",le="0.01"} 0
+a_metric_bucket{foo="bar",le="0.025"} 0
+a_metric_bucket{foo="bar",le="0.05"} 0
+a_metric_bucket{foo="bar",le="0.1"} 0
+a_metric_bucket{foo="bar",le="0.25"} 1
+a_metric_bucket{foo="bar",le="0.5"} 1
+a_metric_bucket{foo="bar",le="1"} 1
+
+# TYPE another_metric histogram
+# HELP another_metric My second metric!
+
+another_metric_count{foo="bar"} 1
+another_metric_sum{foo="bar"} 10
+another_metric_bucket{foo="bar",le="+Inf"} 1
+another_metric_bucket{foo="bar",le="0.01"} 0
+another_metric_bucket{foo="bar",le="0.025"} 0
+another_metric_bucket{foo="bar",le="0.05"} 0
+another_metric_bucket{foo="bar",le="0.1"} 0
+another_metric_bucket{foo="bar",le="0.25"} 0
+another_metric_bucket{foo="bar",le="0.5"} 0
+another_metric_bucket{foo="bar",le="1"} 0
+
+# TYPE yet_another_metric histogram
+# HELP yet_another_metric My third metric!
+
+yet_another_metric_count{foo="bar"} 1
+yet_another_metric_sum{foo="bar"} 0.001
+yet_another_metric_bucket{foo="bar",le="+Inf"} 1
+yet_another_metric_bucket{foo="bar",le="0.01"} 1
+yet_another_metric_bucket{foo="bar",le="0.025"} 1
+yet_another_metric_bucket{foo="bar",le="0.05"} 1
+yet_another_metric_bucket{foo="bar",le="0.1"} 1
+yet_another_metric_bucket{foo="bar",le="0.25"} 1
+yet_another_metric_bucket{foo="bar",le="0.5"} 1
+yet_another_metric_bucket{foo="bar",le="1"} 1

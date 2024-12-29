@@ -1,6 +1,6 @@
 import gleam/dict
 import gleeunit/should
-import internal/label
+import themis/internal/label
 
 pub fn print_test() {
   label.new()

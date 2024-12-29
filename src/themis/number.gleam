@@ -6,6 +6,9 @@ pub type ComparisonError {
   NaNValue
 }
 
+/// Prometheus numbers.
+/// Helpful for displaying and adding/comparing values
+/// of different types.
 pub type Number {
   PosInf
   NegInf
@@ -15,35 +18,35 @@ pub type Number {
 }
 
 /// Creates a Number representing an integer value.
-pub fn int(value value: Int) -> Number {
+pub fn integer(value value: Int) -> Number {
   Int(value)
 }
 
 /// Creates a Number representing a decimal value.
-pub fn dec(value value: Float) -> Number {
+pub fn decimal(value value: Float) -> Number {
   Dec(value)
 }
 
 /// Creates a Number representing positive infinity.
-pub fn pos_inf() -> Number {
+pub fn positive_infinity() -> Number {
   PosInf
 }
 
 /// Creates a Number representing negative infinity.
-pub fn neg_inf() -> Number {
+pub fn negative_infinity() -> Number {
   NegInf
 }
 
 /// Creates a Number representing NaN (Not a Number).
-pub fn nan() -> Number {
+pub fn not_a_number() -> Number {
   NaN
 }
 
 /// Compare two numbers (see gleam_stdlib/order)
 /// Will return an error if either value is NaN
 pub fn compare(
-  compare val1: Number,
-  to val2: Number,
+  to val1: Number,
+  compare val2: Number,
 ) -> Result(order.Order, ComparisonError) {
   case val1, val2 {
     v1, v2 if v1 == v2 -> Ok(order.Eq)
@@ -59,6 +62,18 @@ pub fn compare(
   }
 }
 
+/// Compare two numbers (see gleam_stdlib/order)
+/// Will panic if either value is NaN
+pub fn unsafe_compare(compare val1: Number, to val2: Number) -> order.Order {
+  case compare(val1, val2) {
+    Error(_) -> panic as "cannot compare NaN"
+    Ok(r) -> r
+  }
+}
+
+/// Add two numbers.
+/// Any `NaN` input value will always return `NaN`.
+/// `PosInf` + `NegInf` = `NaN`
 pub fn add(value1 val1: Number, value2 val2: Number) -> Number {
   case val1, val2 {
     NaN, _ | _, NaN -> NaN
@@ -72,6 +87,7 @@ pub fn add(value1 val1: Number, value2 val2: Number) -> Number {
   }
 }
 
+/// Prometheus-scrapable representation of a number
 pub fn print(number: Number) -> String {
   case number {
     Dec(val) -> float.to_string(val)
