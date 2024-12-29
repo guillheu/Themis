@@ -15,6 +15,9 @@ pub type GaugeError {
 
 const blacklist = ["gauge"]
 
+/// Registers a new gauge metric to the store.
+/// Will return an error if the metric name is invalid
+/// or already used by another metric.
 pub fn new(
   store store: Store,
   name name: String,
@@ -35,6 +38,11 @@ pub fn new(
   Error(StoreError(store_error))
 }
 
+/// Sets a gauge value for the given metric name.
+/// Will return an error if the name is invalid, not a registered metric
+/// or not of the correct metric type.
+/// Will return an error if any of the labels have an invalid key.
+/// NaN, PosInf and NegInf values are valid but not recommended.
 pub fn observe(
   store store: Store,
   name name: String,
@@ -44,6 +52,10 @@ pub fn observe(
   use name <- result.try(
     metric.new_name(name, blacklist)
     |> result.map_error(fn(e) { MetricError(e) }),
+  )
+  use _ <- result.try(
+    store.find_metric(store, name, "gauge")
+    |> result.map_error(fn(e) { StoreError(e) }),
   )
   use labels <- result.try(
     label.from_dict(labels) |> result.map_error(fn(e) { LabelError(e) }),
@@ -57,7 +69,7 @@ pub fn observe(
   StoreError(store_error)
 }
 
-pub fn print_all(store store: Store) -> Result(String, GaugeError) {
+pub fn print(store store: Store) -> Result(String, GaugeError) {
   use metrics <- result.try(
     store.match_metrics(store, "gauge")
     |> result.try_recover(fn(e) { Error(StoreError(e)) }),

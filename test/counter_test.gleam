@@ -71,7 +71,7 @@ pub fn increment_by_test() {
   |> should.equal([#(labels, number.decimal(10.111))] |> dict.from_list)
 }
 
-pub fn print_all_test() {
+pub fn print_test() {
   let assert Ok(expected) =
     simplifile.read("test/test_cases/counter_print/expected.txt")
   let store = store.init()
@@ -116,5 +116,5 @@ pub fn print_all_test() {
   )
   |> should.be_ok
 
-  counter.print_all(store) |> should.be_ok |> should.equal(expected)
+  counter.print(store) |> should.be_ok |> should.equal(expected)
 }

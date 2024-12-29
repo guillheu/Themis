@@ -356,7 +356,7 @@ pub fn observe_test() {
   )
 }
 
-pub fn print_all_test() {
+pub fn print_test() {
   let assert Ok(expected) =
     simplifile.read("test/test_cases/histogram_print/expected.txt")
   let store = store.init()
@@ -402,5 +402,5 @@ pub fn print_all_test() {
   )
   |> should.be_ok
 
-  histogram.print_all(store) |> should.be_ok |> should.equal(expected)
+  histogram.print(store) |> should.be_ok |> should.equal(expected)
 }

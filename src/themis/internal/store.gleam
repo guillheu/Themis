@@ -17,6 +17,8 @@ pub type StoreError {
   TableError
   InvalidIncrement
   SingleResultExpected
+  InvalidType
+  MetricNotFound
 }
 
 pub type Store {
@@ -56,9 +58,10 @@ pub fn new_metric(
 pub fn find_metric(
   store store: Store,
   name name: MetricName,
-) -> #(String, String, List(Float)) {
+  kind given_kind: String,
+) -> Result(#(String, String, List(Float)), StoreError) {
   let table = store.metrics
-  let assert [Ok(#(_name, description, kind, buckets))] =
+  use #(description, kind, buckets) <- result.try(case
     ets.lookup(table, name |> metric.name_to_string)
     |> list.map(fn(found) {
       dynamic.tuple4(
@@ -68,8 +71,16 @@ pub fn find_metric(
         dynamic.list(dynamic.float),
       )(found)
     })
-
-  #(description, kind, buckets)
+  {
+    [Ok(#(_name, description, kind, buckets))] ->
+      Ok(#(description, kind, buckets))
+    [] -> Error(MetricNotFound)
+    _ -> Error(TableError)
+  })
+  case kind == given_kind {
+    False -> Error(InvalidType)
+    True -> Ok(#(description, kind, buckets))
+  }
 }
 
 pub fn match_metrics(

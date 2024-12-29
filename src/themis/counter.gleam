@@ -21,6 +21,10 @@ pub type CounterError {
 
 const blacklist = ["counter"]
 
+/// Registers a new counter metric to the store.
+/// Counter metric names must end with `_total`.
+/// Will return an error if the metric name is invalid
+/// or already used by another metric.
 pub fn new(
   store store: Store,
   name name: String,
@@ -45,6 +49,11 @@ pub fn new(
   Error(StoreError(store_error))
 }
 
+/// Increments a counter metric for the given metric name.
+/// Will return an error if the name is invalid, not a registered metric
+/// or not of the correct metric type.
+/// Will return an error if any of the labels have an invalid key.
+/// Will return an error if the value is NaN, PosInf or NegInf.
 pub fn increment_by(
   store store: Store,
   name name: String,
@@ -67,6 +76,10 @@ pub fn increment_by(
     metric.new_name(name, blacklist)
     |> result.map_error(fn(e) { MetricError(e) }),
   )
+  use _ <- result.try(
+    store.find_metric(store, name, "counter")
+    |> result.map_error(fn(e) { StoreError(e) }),
+  )
   use labels <- result.try(
     label.from_dict(labels) |> result.map_error(fn(e) { LabelError(e) }),
   )
@@ -79,6 +92,10 @@ pub fn increment_by(
   StoreError(store_error)
 }
 
+/// Increments a counter metric for the given metric name.
+/// Will return an error if the name is invalid, not a registered metric
+/// or not of the correct metric type.
+/// Will return an error if any of the labels have an invalid key.
 pub fn increment(
   store store: Store,
   name name: String,
@@ -87,7 +104,9 @@ pub fn increment(
   increment_by(store, name, labels, number.integer(1))
 }
 
-pub fn print_all(store store: Store) -> Result(String, CounterError) {
+/// Formats all counter metrics in the store 
+/// as a Prometheus-compatible text string.
+pub fn print(store store: Store) -> Result(String, CounterError) {
   use metrics <- result.try(
     store.match_metrics(store, "counter")
     |> result.try_recover(fn(e) { Error(StoreError(e)) }),

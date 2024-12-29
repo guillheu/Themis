@@ -23,6 +23,13 @@ pub type HistogramError {
 
 const blacklist = ["histogram"]
 
+/// Registers a new histogram metric to the store.
+/// The "Buckets" argument is a set of histogram buckets
+/// "le" values, as described here
+/// https://prometheus.io/docs/practices/histograms/
+/// Will return an error if the metric name is invalid,
+/// already used, or if any of the buckets have an
+/// invalid value ("PosInf, NegInf, NaN")
 pub fn new(
   store store: store.Store,
   name name: String,
@@ -49,6 +56,11 @@ pub fn new(
   }
 }
 
+/// Records a datapoint into the histogram for the given metric name.
+/// Will return an error if the name is invalid, not a registered metric
+/// or not of the correct metric type.
+/// Will return an error if any of the labels have an invalid key.
+/// Will return an error if the value is number.NaN
 pub fn observe(
   store store: store.Store,
   name name: String,
@@ -64,7 +76,10 @@ pub fn observe(
   use labels <- result.try(
     label.from_dict(labels) |> result.map_error(fn(e) { LabelError(e) }),
   )
-  let #(_description, _kind, buckets) = store.find_metric(store, name)
+  use #(_description, _kind, buckets) <- result.try(
+    store.find_metric(store, name, "histogram")
+    |> result.map_error(fn(e) { StoreError(e) }),
+  )
   // [
   //   "+Inf",
   //   "1",
@@ -144,7 +159,9 @@ pub fn observe(
   Ok(Nil)
 }
 
-pub fn print_all(store store: store.Store) -> Result(String, HistogramError) {
+/// Formats all histogram metrics in the store 
+/// as a Prometheus-compatible text string.
+pub fn print(store store: store.Store) -> Result(String, HistogramError) {
   use metrics <- result.try(
     store.match_metrics(store, "histogram")
     |> result.try_recover(fn(e) { Error(StoreError(e)) }),

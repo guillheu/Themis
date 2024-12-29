@@ -61,7 +61,7 @@ pub fn observe_test() {
   |> should.equal([#(labels, value5)] |> dict.from_list)
 }
 
-pub fn print_all_test() {
+pub fn print_test() {
   let assert Ok(expected) =
     simplifile.read("test/test_cases/gauge_print/expected.txt")
   let store = store.init()
@@ -89,5 +89,5 @@ pub fn print_all_test() {
   gauge.observe(store, "yet_another_metric", labels |> label.to_dict, value3)
   |> should.be_ok
 
-  gauge.print_all(store) |> should.be_ok |> should.equal(expected)
+  gauge.print(store) |> should.be_ok |> should.equal(expected)
 }

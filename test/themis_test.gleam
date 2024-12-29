@@ -137,3 +137,26 @@ pub fn print_test() {
 
   themis.print(store) |> should.be_ok |> should.equal(expected)
 }
+
+pub fn observe_collision_test() {
+  let store = store.init()
+  gauge.new(store, "a_metric", "My first metric!")
+  |> should.be_ok
+  counter.new(store, "another_metric_total", "My first metric!")
+  |> should.be_ok
+
+  histogram.observe(store, "a_metric", dict.new(), number.integer(1))
+  // Should not be able to set a gauge as a histogram
+  |> should.be_error
+  |> should.equal(histogram.StoreError(store.InvalidType))
+
+  counter.increment(store, "a_metric_total", dict.new())
+  // Should not be able to set a gauge as a histogram
+  |> should.be_error
+  |> should.equal(counter.StoreError(store.MetricNotFound))
+  // |> should.equal(histogram.StoreError(store.InvalidType))
+
+  gauge.observe(store, "another_metric_total", dict.new(), number.integer(10))
+  |> should.be_error
+  |> should.equal(gauge.StoreError(store.InvalidType))
+}
