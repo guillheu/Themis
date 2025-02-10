@@ -27,14 +27,13 @@ import themis/number
 
 pub fn main() {
   // initialize the metrics store
-  let metrics_store = themis.init()
+  themis.init()
 
   // Gauge
 
   // This can fail if the metric name is invalid
   let assert Ok(_) =
     gauge.new(
-      metrics_store,
       "my_first_metric",
       "A gauge Prometheus metric",
     )
@@ -42,13 +41,12 @@ pub fn main() {
   let labels = dict.from_list([#("foo", "bar")])
   let value = number.integer(10)
   let assert Ok(_) =
-    gauge.observe(metrics_store, "my_first_metric", labels, value)
+    gauge.observe("my_first_metric", labels, value)
 
   // Counter
 
   let assert Ok(_) =
     counter.new(
-      metrics_store,
       "my_second_metric",
       "A counter Prometheus metric",
     )
@@ -56,12 +54,11 @@ pub fn main() {
   let labels = dict.from_list([#("wibble", "wobble")])
   let other_labels = dict.from_list([#("wii", "woo")])
   let assert Ok(_) =
-    counter.new(metrics_store, "my_second_metric", "A counter Prometheus metric")
+    counter.new("my_second_metric", "A counter Prometheus metric")
   let assert Ok(_) =
-    counter.increment(metrics_store, "my_second_metric", labels)
+    counter.increment("my_second_metric", labels)
   let assert Ok(_) =
     counter.increment_by(
-      metrics_store,
       "my_second_metric",
       other_labels,
       number.decimal(1.2),
@@ -81,7 +78,6 @@ pub fn main() {
     ])
   let assert Ok(_) =
     histogram.new(
-      metrics_store,
       "my_third_metric",
       "A histogram Prometheus metric",
       buckets,
@@ -92,18 +88,17 @@ pub fn main() {
   let labels = dict.from_list([#("toto", "tata")])
   let other_labels = dict.from_list([#("toto", "titi")])
   let assert Ok(_) =
-    histogram.observe(metrics_store, "my_third_metric", labels, value)
+    histogram.observe("my_third_metric", labels, value)
   // When incrementing a histogram with new labels, a new histogram will automatically be initialized
   let assert Ok(_) =
     histogram.observe(
-      metrics_store,
       "my_third_metric",
       other_labels,
       other_value,
     )
 
   // Printing all the metrics as a Prometheus-scrapable String
-  let assert Ok(prometheus_string) = themis.print(metrics_store)
+  let assert Ok(prometheus_string) = themis.print()
   io.println(prometheus_string)
 }
 
@@ -177,7 +172,6 @@ import themis/gauge
 // Create a new gauge metric
 let assert Ok(_) = 
   gauge.new(
-    metrics_store,
     "process_memory_bytes",
     "Current memory usage in bytes",
   )
@@ -186,7 +180,7 @@ let assert Ok(_) =
 let labels = dict.from_list([#("process", "web_server")])
 let value = number.integer(52_428_800)  // 50MB in bytes
 let assert Ok(_) =
-  gauge.observe(metrics_store, "process_memory_bytes", labels, value)
+  gauge.observe("process_memory_bytes", labels, value)
 ```
 
 #### Counters
@@ -199,7 +193,6 @@ import themis/counter
 // Create a new counter metric
 let assert Ok(_) =
   counter.new(
-    metrics_store,
     "http_requests_total",
     "Total number of HTTP requests made",
   )
@@ -208,16 +201,15 @@ let assert Ok(_) =
 // To have a counter of value 0, you must increment it by 0:
 let labels = dict.from_list([#("method", "GET"), #("path", "/api/users")])
 let assert Ok(_) =
-  counter.increment_by(metrics_store, "http_requests_total", labels, number.integer(0))
+  counter.increment_by("http_requests_total", labels, number.integer(0))
 
 // Increment counter by 1
 let assert Ok(_) =
-  counter.increment(metrics_store, "http_requests_total", labels)
+  counter.increment("http_requests_total", labels)
 
 // Increment counter by specific amount
 let assert Ok(_) =
   counter.increment_by(
-    metrics_store,
     "http_requests_total",
     labels,
     number.decimal(5.0),
@@ -247,7 +239,6 @@ let buckets =
 // Create a new histogram metric
 let assert Ok(_) =
   histogram.new(
-    metrics_store,
     "http_request_duration_seconds",
     "HTTP request duration in seconds",
     buckets,
@@ -258,7 +249,6 @@ let labels = dict.from_list([#("method", "POST"), #("path", "/api/users")])
 let duration = number.decimal(0.157)  // 157ms
 let assert Ok(_) =
   histogram.observe(
-    metrics_store,
     "http_request_duration_seconds",
     labels,
     duration,
