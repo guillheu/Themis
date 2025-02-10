@@ -11,15 +11,15 @@ pub fn new_metric_test() {
   let store = store.init()
   let name = "a_name" |> metric.new_name([]) |> should.be_ok
   let name2 = "another_name" |> metric.new_name([]) |> should.be_ok
-  store.new_metric(store, name, "a metric", "gauge", []) |> should.be_ok
-  store.new_metric(store, name, "a metric", "gauge", []) |> should.be_error
-  store.new_metric(store, name2, "a metric", "gauge", []) |> should.be_ok
+  store.new_metric(name, "a metric", "gauge", []) |> should.be_ok
+  store.new_metric(name, "a metric", "gauge", []) |> should.be_error
+  store.new_metric(name2, "a metric", "gauge", []) |> should.be_ok
+  store.clear()
 }
 
 pub fn match_metrics_test() {
   let store = store.init()
   store.new_metric(
-    store,
     "a_name" |> metric.new_name([]) |> should.be_ok,
     "a new metric",
     "gauge",
@@ -27,7 +27,6 @@ pub fn match_metrics_test() {
   )
   |> should.be_ok
   store.new_metric(
-    store,
     "another_name" |> metric.new_name([]) |> should.be_ok,
     "a new metric",
     "histogram",
@@ -35,7 +34,6 @@ pub fn match_metrics_test() {
   )
   |> should.be_ok
   store.new_metric(
-    store,
     "yet_another_name" |> metric.new_name([]) |> should.be_ok,
     "a new metric",
     "gauge",
@@ -43,20 +41,21 @@ pub fn match_metrics_test() {
   )
   |> should.be_ok
 
-  store.match_metrics(store, "gauge")
+  store.match_metrics("gauge")
   |> should.be_ok
   |> should.equal([
     #("yet_another_name", "a new metric", []),
     #("a_name", "a new metric", []),
   ])
-  store.match_metrics(store, "histogram")
+  store.match_metrics("histogram")
   |> should.be_ok
   |> should.equal([
     #("another_name", "a new metric", [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0]),
   ])
-  store.match_metrics(store, "counter")
+  store.match_metrics("counter")
   |> should.be_ok
   |> should.equal([])
+  store.clear()
 }
 
 pub fn match_records_test() {
@@ -78,16 +77,17 @@ pub fn match_records_test() {
 
   // insert 1st value
 
-  store.insert_record(store, name1, labels1, value1) |> should.be_ok
-  ets.lookup(store.records, #(
+  store.insert_record(name1, labels1, value1) |> should.be_ok
+  ets.lookup("themis_records", #(
     name1 |> metric.name_to_string,
     labels1 |> label.to_strings,
   ))
+  |> should.be_ok
   |> should.equal([
     #(#("a_metric", ["foo:bar"]), 10, 0.0, "")
     |> dynamic.from,
   ])
-  store.match_records(store, name1)
+  store.match_records(name1)
   |> should.be_ok
   |> should.equal(
     [
@@ -101,16 +101,17 @@ pub fn match_records_test() {
 
   // insert 2nd value
 
-  store.insert_record(store, name2, labels2, value2) |> should.be_ok
-  ets.lookup(store.records, #(
+  store.insert_record(name2, labels2, value2) |> should.be_ok
+  ets.lookup("themis_records", #(
     name2 |> metric.name_to_string,
     labels2 |> label.to_strings,
   ))
+  |> should.be_ok
   |> should.equal([
     #(#("a_metric", ["wibble:wobble"]), 0, 20.1, "")
     |> dynamic.from,
   ])
-  store.match_records(store, name2)
+  store.match_records(name2)
   |> should.be_ok
   |> should.equal(
     [
@@ -129,16 +130,17 @@ pub fn match_records_test() {
   )
   // insert 3rd value
 
-  store.insert_record(store, name3, labels3, value3) |> should.be_ok
-  ets.lookup(store.records, #(
+  store.insert_record(name3, labels3, value3) |> should.be_ok
+  ets.lookup("themis_records", #(
     name3 |> metric.name_to_string,
     labels3 |> label.to_strings,
   ))
+  |> should.be_ok
   |> should.equal([
     #(#("another_metric", ["toto:tata"]), 0, 0.0, "+Inf")
     |> dynamic.from,
   ])
-  store.match_records(store, name3)
+  store.match_records(name3)
   |> should.be_ok
   |> should.equal(
     [
@@ -149,26 +151,28 @@ pub fn match_records_test() {
     ]
     |> dict.from_list,
   )
+  store.clear()
 }
 
 pub fn increment_record_by_test() {
   let store = store.init()
   let name = "a_name" |> metric.new_name([]) |> should.be_ok
-  store.new_metric(store, name, "a metric", "gauge", []) |> should.be_ok
+  store.new_metric(name, "a metric", "gauge", []) |> should.be_ok
 
   let labels =
     [#("foo", "bar")] |> dict.from_list |> label.from_dict |> should.be_ok
 
-  store.insert_record(store, name, labels, number.integer(10)) |> should.be_ok
+  store.insert_record(name, labels, number.integer(10)) |> should.be_ok
 
-  store.increment_record_by(store, name, labels, number.decimal(10.1))
+  store.increment_record_by(name, labels, number.decimal(10.1))
   |> should.be_ok
-  store.match_records(store, name)
+  store.match_records(name)
   |> should.be_ok
   |> should.equal([#(labels, number.decimal(20.1))] |> dict.from_list)
-  store.increment_record_by(store, name, labels, number.decimal(5.5))
+  store.increment_record_by(name, labels, number.decimal(5.5))
   |> should.be_ok
-  store.match_records(store, name)
+  store.match_records(name)
   |> should.be_ok
   |> should.equal([#(labels, number.decimal(25.6))] |> dict.from_list)
+  store.clear()
 }

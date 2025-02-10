@@ -9,7 +9,7 @@ import themis/internal/store
 import themis/number
 
 pub fn new_test() {
-  let store = store.init()
+  store.init()
   let buckets =
     [
       number.decimal(0.01),
@@ -21,20 +21,20 @@ pub fn new_test() {
       number.decimal(1.0),
     ]
     |> set.from_list
-  histogram.new(store, "a_metric", "My first metric!", buckets)
+  histogram.new("a_metric", "My first metric!", buckets)
   |> should.be_ok
-  histogram.new(store, "a_metric", "My first metric!", buckets)
+  histogram.new("a_metric", "My first metric!", buckets)
   |> should.be_error
   |> should.equal(histogram.StoreError(store.MetricNameAlreadyExists))
 
   histogram.new(
-    store,
     "another_metric",
     "My first metric!",
     buckets |> set.union([number.positive_infinity()] |> set.from_list),
   )
   |> should.be_error
   |> should.equal(histogram.InvalidBucketValue)
+  store.clear()
 }
 
 pub fn observe_test() {
@@ -62,11 +62,11 @@ pub fn observe_test() {
       number.decimal(1.0),
     ]
     |> set.from_list
-  histogram.new(store, name, "My first metric!", buckets)
+  histogram.new(name, "My first metric!", buckets)
   |> should.be_ok
-  histogram.observe(store, name, labels |> label.to_dict, value1)
+  histogram.observe(name, labels |> label.to_dict, value1)
   |> should.be_ok
-  store.match_records(store, bucket_name)
+  store.match_records(bucket_name)
   |> should.be_ok
   |> should.equal(
     [
@@ -137,7 +137,7 @@ pub fn observe_test() {
     |> dict.from_list,
   )
 
-  store.match_records(store, count_name)
+  store.match_records(count_name)
   |> should.be_ok
   |> should.equal(
     [
@@ -149,7 +149,7 @@ pub fn observe_test() {
     |> dict.from_list,
   )
 
-  store.match_records(store, sum_name)
+  store.match_records(sum_name)
   |> should.be_ok
   |> should.equal(
     [
@@ -161,9 +161,9 @@ pub fn observe_test() {
     |> dict.from_list,
   )
 
-  histogram.observe(store, name, labels |> label.to_dict, value2)
+  histogram.observe(name, labels |> label.to_dict, value2)
   |> should.be_ok
-  store.match_records(store, bucket_name)
+  store.match_records(bucket_name)
   |> should.be_ok
   |> should.equal(
     [
@@ -234,7 +234,7 @@ pub fn observe_test() {
     |> dict.from_list,
   )
 
-  store.match_records(store, count_name)
+  store.match_records(count_name)
   |> should.be_ok
   |> should.equal(
     [
@@ -246,7 +246,7 @@ pub fn observe_test() {
     |> dict.from_list,
   )
 
-  store.match_records(store, sum_name)
+  store.match_records(sum_name)
   |> should.be_ok
   |> should.equal(
     [
@@ -258,9 +258,9 @@ pub fn observe_test() {
     |> dict.from_list,
   )
 
-  histogram.observe(store, name, labels |> label.to_dict, value3)
+  histogram.observe(name, labels |> label.to_dict, value3)
   |> should.be_ok
-  store.match_records(store, bucket_name)
+  store.match_records(bucket_name)
   |> should.be_ok
   |> should.equal(
     [
@@ -331,7 +331,7 @@ pub fn observe_test() {
     |> dict.from_list,
   )
 
-  store.match_records(store, count_name)
+  store.match_records(count_name)
   |> should.be_ok
   |> should.equal(
     [
@@ -343,7 +343,7 @@ pub fn observe_test() {
     |> dict.from_list,
   )
 
-  store.match_records(store, sum_name)
+  store.match_records(sum_name)
   |> should.be_ok
   |> should.equal(
     [
@@ -354,12 +354,13 @@ pub fn observe_test() {
     ]
     |> dict.from_list,
   )
+  store.clear()
 }
 
 pub fn print_test() {
   let assert Ok(expected) =
     simplifile.read("test/test_cases/histogram_print/expected.txt")
-  let store = store.init()
+  store.init()
   let labels =
     [#("foo", "bar")] |> dict.from_list |> label.from_dict |> should.be_ok
   let labels2 =
@@ -380,27 +381,23 @@ pub fn print_test() {
       number.decimal(1.0),
     ]
     |> set.from_list
-  histogram.new(store, "a_metric", "My first metric!", buckets)
+  histogram.new("a_metric", "My first metric!", buckets)
   |> should.be_ok
-  histogram.new(store, "another_metric", "My second metric!", buckets)
+  histogram.new("another_metric", "My second metric!", buckets)
   |> should.be_ok
-  histogram.new(store, "yet_another_metric", "My third metric!", buckets)
+  histogram.new("yet_another_metric", "My third metric!", buckets)
   |> should.be_ok
-  histogram.observe(store, "a_metric", labels |> label.to_dict, value1)
+  histogram.observe("a_metric", labels |> label.to_dict, value1)
   |> should.be_ok
-  histogram.observe(store, "a_metric", labels |> label.to_dict, value2)
+  histogram.observe("a_metric", labels |> label.to_dict, value2)
   |> should.be_ok
-  histogram.observe(store, "a_metric", labels2 |> label.to_dict, value2)
+  histogram.observe("a_metric", labels2 |> label.to_dict, value2)
   |> should.be_ok
-  histogram.observe(store, "another_metric", labels |> label.to_dict, value2)
+  histogram.observe("another_metric", labels |> label.to_dict, value2)
   |> should.be_ok
-  histogram.observe(
-    store,
-    "yet_another_metric",
-    labels |> label.to_dict,
-    value3,
-  )
+  histogram.observe("yet_another_metric", labels |> label.to_dict, value3)
   |> should.be_ok
 
-  histogram.print(store) |> should.be_ok |> should.equal(expected)
+  histogram.print() |> should.be_ok |> should.equal(expected)
+  store.clear()
 }

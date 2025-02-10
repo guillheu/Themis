@@ -31,7 +31,7 @@ const blacklist = ["histogram"]
 /// already used, or if any of the buckets have an
 /// invalid value ("PosInf, NegInf, NaN")
 pub fn new(
-  store store: store.Store,
+  // store store: store.Store,
   name name: String,
   description description: String,
   buckets buckets: Set(Number),
@@ -46,9 +46,7 @@ pub fn new(
     Error(e) -> Error(MetricError(e))
     Ok(metric_name) -> {
       use buckets <- result.try(buckets |> buckets_to_list_float)
-      case
-        store.new_metric(store, metric_name, description, "histogram", buckets)
-      {
+      case store.new_metric(metric_name, description, "histogram", buckets) {
         Error(e) -> Error(StoreError(e))
         Ok(_) -> Ok(Nil)
       }
@@ -62,7 +60,7 @@ pub fn new(
 /// Will return an error if any of the labels have an invalid key.
 /// Will return an error if the value is number.NaN
 pub fn observe(
-  store store: store.Store,
+  // store store: store.Store,
   name name: String,
   labels labels: Dict(String, String),
   value value: Number,
@@ -77,7 +75,7 @@ pub fn observe(
     label.from_dict(labels) |> result.map_error(fn(e) { LabelError(e) }),
   )
   use #(_description, _kind, buckets) <- result.try(
-    store.find_metric(store, name, "histogram")
+    store.find_metric(name, "histogram")
     |> result.map_error(fn(e) { StoreError(e) }),
   )
   // [
@@ -100,7 +98,7 @@ pub fn observe(
   // When looping through all buckets with fold_until, if this variable is true,
   // will set all non-matching buckets to 0 to initialize them.
   let must_initialize_records =
-    store.find_record(store, bucket_name, posinf_labels) |> result.is_error
+    store.find_record(bucket_name, posinf_labels) |> result.is_error
 
   list.fold_until(le_labels, Nil, fn(_, bucket) {
     let value_belongs_to_bucket =
@@ -122,7 +120,7 @@ pub fn observe(
         panic as "rebuilding labels after only adding the \"le\" label should work"
       Ok(labels) -> labels
     }
-    case store.increment_record_by(store, bucket_name, labels, by) {
+    case store.increment_record_by(bucket_name, labels, by) {
       Error(e) ->
         panic as {
           "failed to increment a bucket record : \nName: "
@@ -134,7 +132,7 @@ pub fn observe(
     }
   })
 
-  case store.increment_record(store, count_name, labels) {
+  case store.increment_record(count_name, labels) {
     Error(e) ->
       panic as {
         "failed to increment a count record : \nName: "
@@ -145,7 +143,7 @@ pub fn observe(
     Ok(_) -> Nil
   }
 
-  case store.increment_record_by(store, sum_name, labels, value) {
+  case store.increment_record_by(sum_name, labels, value) {
     Error(e) ->
       panic as {
         "failed to increment a sum record : \nName: "
@@ -161,9 +159,9 @@ pub fn observe(
 
 /// Formats all histogram metrics in the store 
 /// as a Prometheus-compatible text string.
-pub fn print(store store: store.Store) -> Result(String, HistogramError) {
+pub fn print() -> Result(String, HistogramError) {
   use metrics <- result.try(
-    store.match_metrics(store, "histogram")
+    store.match_metrics("histogram")
     |> result.try_recover(fn(e) { Error(StoreError(e)) }),
   )
   let r = {
@@ -179,15 +177,15 @@ pub fn print(store store: store.Store) -> Result(String, HistogramError) {
     let #(buckets_name, count_name, sum_name) =
       metric.make_histogram_metric_names(name)
     use bucket_records <- result.try(
-      store.match_records(store, buckets_name)
+      store.match_records(buckets_name)
       |> result.try_recover(fn(e) { Error(StoreError(e)) }),
     )
     use sum_records <- result.try(
-      store.match_records(store, sum_name)
+      store.match_records(sum_name)
       |> result.try_recover(fn(e) { Error(StoreError(e)) }),
     )
     use count_records <- result.try(
-      store.match_records(store, count_name)
+      store.match_records(count_name)
       |> result.try_recover(fn(e) { Error(StoreError(e)) }),
     )
 

@@ -9,8 +9,9 @@ import themis/internal/erlang/ets
 import themis/number
 
 pub fn counter_test() {
-  let table = ets.new(ets.TableBuilder(ets.Set, ets.Private), "test_table")
-  let table_info = ets.info(table)
+  let _table = ets.new(ets.TableBuilder(ets.Set, ets.Private), "test_table")
+  let table = "test_table"
+  let table_info = ets.info(table |> atom.from_string |> should.be_ok)
 
   table_info
   |> should.equal(
@@ -26,7 +27,7 @@ pub fn counter_test() {
       name: "test_table" |> atom.create_from_string,
       size: 0,
       node: "nonode@nohost" |> atom.create_from_string,
-      named_table: False,
+      named_table: True,
       table_type: ets.Set,
       keypos: 1,
       protection: ets.Private,
@@ -34,23 +35,32 @@ pub fn counter_test() {
   )
   let labels = ["wibble:wobble"]
   ets.lookup(table, #("foo"))
+  |> should.be_ok
   |> should.equal([])
   ets.counter_increment(table, #("foo"))
+  |> should.be_ok
   check_entry(table, #("foo"), 1, 0.0, "")
   ets.counter_increment_by(table, #("foo"), number.integer(2))
+  |> should.be_ok
   check_entry(table, #("foo"), 3, 0.0, "")
   ets.counter_increment_by(table, #("foo"), number.decimal(1.0))
+  |> should.be_ok
   check_entry(table, #("foo"), 3, 1.0, "")
   ets.counter_increment_by(table, #("a_metric", labels), number.integer(1))
+  |> should.be_ok
   check_entry(table, #("a_metric", labels), 1, 0.0, "")
   ets.insert_raw(
     table,
     #(#("a_metric", labels), 0, 0.0, "toto") |> dynamic.from,
   )
+  |> should.be_ok
   ets.counter_increment_by(table, #("a_metric", labels), number.decimal(1.0))
+  |> should.be_ok
   check_entry(table, #("a_metric", labels), 0, 1.0, "toto")
   ets.counter_increment_by(table, #("a_metric", labels), number.integer(10))
+  |> should.be_ok
   check_entry(table, #("a_metric", labels), 10, 1.0, "toto")
+  ets.delete_table(table)
 }
 
 pub type Something {
@@ -60,26 +70,39 @@ pub type Something {
 }
 
 pub fn match_metric_test() {
-  let table = ets.new(ets.TableBuilder(ets.Set, ets.Private), "test_table")
+  let _table = ets.new(ets.TableBuilder(ets.Set, ets.Private), "test_table")
+  let table = "test_table"
   ets.insert_raw(table, #("foo", "lol", Somewhere, Nil) |> dynamic.from)
+  |> should.be_ok
   ets.match_metric(table, Somewhere)
   |> should.equal(ets.lookup(table, "foo"))
   ets.insert_raw(table, #("bar", "xd", Somewhere, Somewhat) |> dynamic.from)
+  |> should.be_ok
+
   ets.match_metric(table, Somewhere)
+  |> should.be_ok
   |> should.equal(
-    ets.lookup(table, "foo") |> list.append(ets.lookup(table, "bar")),
+    ets.lookup(table, "foo")
+    |> should.be_ok
+    |> list.append(ets.lookup(table, "bar") |> should.be_ok),
   )
   ets.insert_raw(table, #("baz", "mdr", Someone, Somewhat) |> dynamic.from)
+  |> should.be_ok
   ets.match_metric(table, Somewhere)
+  |> should.be_ok
   |> should.equal(
-    ets.lookup(table, "foo") |> list.append(ets.lookup(table, "bar")),
+    ets.lookup(table, "foo")
+    |> should.be_ok
+    |> list.append(ets.lookup(table, "bar") |> should.be_ok),
   )
   ets.match_metric(table, Someone)
   |> should.equal(ets.lookup(table, "baz"))
+  ets.delete_table(table)
 }
 
 pub fn match_record_test() {
-  let table = ets.new(ets.TableBuilder(ets.Set, ets.Private), "test_table")
+  let _table = ets.new(ets.TableBuilder(ets.Set, ets.Private), "test_table")
+  let table = "test_table"
   let labels1 = dict.from_list([#("foo", "bar")])
   let labels2 = dict.from_list([#("wibble", "wobble")])
   let labels3 = dict.from_list([#("toto", "tata")])
@@ -87,6 +110,7 @@ pub fn match_record_test() {
     table,
     #(#("a_metric_name", labels1), 10, 0.5, Nil) |> dynamic.from,
   )
+  |> should.be_ok
   ets.match_record(table, "a_metric_name")
   |> should.equal(ets.lookup(table, #("a_metric_name", labels1)))
 
@@ -94,16 +118,23 @@ pub fn match_record_test() {
     table,
     #(#("a_metric_name", labels2), 5, 10.6, Nil) |> dynamic.from,
   )
+  |> should.be_ok
   ets.insert_raw(
     table,
     #(#("a_different_metric_name", labels3), 69, 4.2, Nil) |> dynamic.from,
   )
+  |> should.be_ok
 
   ets.match_record(table, "a_metric_name")
+  |> should.be_ok
   |> should.equal(
     ets.lookup(table, #("a_metric_name", labels1))
-    |> list.append(ets.lookup(table, #("a_metric_name", labels2))),
+    |> should.be_ok
+    |> list.append(
+      ets.lookup(table, #("a_metric_name", labels2)) |> should.be_ok,
+    ),
   )
+  ets.delete_table(table)
 }
 
 // pub fn gauge_test() {
@@ -140,13 +171,13 @@ pub fn match_record_test() {
 // }
 
 fn check_entry(
-  table: ets.Table,
+  table: String,
   key: any,
   val_int: Int,
   val_float: Float,
   val_flag: String,
 ) {
-  let assert [dyn] = ets.lookup(table, key)
+  let assert Ok([dyn]) = ets.lookup(table, key)
   let #(k, value_int, value_float, flag) =
     dyn
     |> dynamic.tuple4(

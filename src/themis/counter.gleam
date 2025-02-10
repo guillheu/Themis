@@ -7,7 +7,7 @@ import gleam/string
 import gleam/string_tree
 import themis/internal/label
 import themis/internal/metric
-import themis/internal/store.{type Store}
+import themis/internal/store
 import themis/number.{type Number}
 
 pub type CounterError {
@@ -26,7 +26,7 @@ const blacklist = ["counter"]
 /// Will return an error if the metric name is invalid
 /// or already used by another metric.
 pub fn new(
-  store store: Store,
+  // store store: Store,
   name name: String,
   description description: String,
 ) -> Result(Nil, CounterError) {
@@ -40,7 +40,6 @@ pub fn new(
   )
   let buckets = []
   use store_error <- result.try_recover(store.new_metric(
-    store,
     name,
     description,
     "counter",
@@ -55,7 +54,7 @@ pub fn new(
 /// Will return an error if any of the labels have an invalid key.
 /// Will return an error if the value is NaN, PosInf or NegInf.
 pub fn increment_by(
-  store store: Store,
+  // store store: Store,
   name name: String,
   labels labels: Dict(String, String),
   value value: Number,
@@ -77,14 +76,13 @@ pub fn increment_by(
     |> result.map_error(fn(e) { MetricError(e) }),
   )
   use _ <- result.try(
-    store.find_metric(store, name, "counter")
+    store.find_metric(name, "counter")
     |> result.map_error(fn(e) { StoreError(e) }),
   )
   use labels <- result.try(
     label.from_dict(labels) |> result.map_error(fn(e) { LabelError(e) }),
   )
   use store_error <- result.map_error(store.increment_record_by(
-    store,
     name,
     labels,
     value,
@@ -97,18 +95,18 @@ pub fn increment_by(
 /// or not of the correct metric type.
 /// Will return an error if any of the labels have an invalid key.
 pub fn increment(
-  store store: Store,
+  // store store: Store,
   name name: String,
   labels labels: Dict(String, String),
 ) -> Result(Nil, CounterError) {
-  increment_by(store, name, labels, number.integer(1))
+  increment_by(name, labels, number.integer(1))
 }
 
 /// Formats all counter metrics in the store 
 /// as a Prometheus-compatible text string.
-pub fn print(store store: Store) -> Result(String, CounterError) {
+pub fn print() -> Result(String, CounterError) {
   use metrics <- result.try(
-    store.match_metrics(store, "counter")
+    store.match_metrics("counter")
     |> result.try_recover(fn(e) { Error(StoreError(e)) }),
   )
   let r = {
@@ -121,7 +119,7 @@ pub fn print(store store: Store) -> Result(String, CounterError) {
       |> result.map_error(fn(e) { MetricError(e) }),
     )
     use counter_records <- result.try(
-      store.match_records(store, name)
+      store.match_records(name)
       |> result.map_error(fn(e) { StoreError(e) }),
     )
     let help_string = "# HELP " <> name_string <> " " <> description <> "\n"

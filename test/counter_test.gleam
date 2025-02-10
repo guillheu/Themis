@@ -8,20 +8,21 @@ import themis/internal/store
 import themis/number
 
 pub fn new_test() {
-  let store = store.init()
-  counter.new(store, "a_metric_total", "My first metric!")
+  store.init()
+  counter.new("a_metric_total", "My first metric!")
   |> should.be_ok
-  counter.new(store, "a_metric_total", "My second metric!")
+  counter.new("a_metric_total", "My second metric!")
   |> should.be_error
   |> should.equal(counter.StoreError(store.MetricNameAlreadyExists))
-  counter.new(store, "a_metric", "My third metric!")
+  counter.new("a_metric", "My third metric!")
   |> should.be_error
   |> should.equal(counter.CounterNameShouldEndWithTotal)
+  store.clear()
 }
 
 pub fn increment_by_test() {
-  let store = store.init()
-  counter.new(store, "a_metric_total", "My first metric!")
+  store.init()
+  counter.new("a_metric_total", "My first metric!")
   |> should.be_ok
 
   let labels =
@@ -31,15 +32,14 @@ pub fn increment_by_test() {
   let value2 = number.integer(10)
   let value3 = number.decimal(0.001)
 
-  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value1)
+  counter.increment_by("a_metric_total", labels |> label.to_dict, value1)
   |> should.be_ok
-  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value2)
+  counter.increment_by("a_metric_total", labels |> label.to_dict, value2)
   |> should.be_ok
-  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value3)
+  counter.increment_by("a_metric_total", labels |> label.to_dict, value3)
   |> should.be_ok
 
   counter.increment_by(
-    store,
     "a_metric_total",
     labels |> label.to_dict,
     number.not_a_number(),
@@ -47,7 +47,6 @@ pub fn increment_by_test() {
   |> should.be_error
   |> should.equal(counter.InvalidIncrement(number.NaN))
   counter.increment_by(
-    store,
     "a_metric_total",
     labels |> label.to_dict,
     number.positive_infinity(),
@@ -55,7 +54,6 @@ pub fn increment_by_test() {
   |> should.be_error
   |> should.equal(counter.InvalidIncrement(number.PosInf))
   counter.increment_by(
-    store,
     "a_metric_total",
     labels |> label.to_dict,
     number.negative_infinity(),
@@ -63,18 +61,16 @@ pub fn increment_by_test() {
   |> should.be_error
   |> should.equal(counter.InvalidIncrement(number.NegInf))
 
-  store.match_records(
-    store,
-    "a_metric_total" |> metric.new_name([]) |> should.be_ok,
-  )
+  store.match_records("a_metric_total" |> metric.new_name([]) |> should.be_ok)
   |> should.be_ok
   |> should.equal([#(labels, number.decimal(10.111))] |> dict.from_list)
+  store.clear()
 }
 
 pub fn print_test() {
   let assert Ok(expected) =
     simplifile.read("test/test_cases/counter_print/expected.txt")
-  let store = store.init()
+  store.init()
   let labels =
     [#("foo", "bar")] |> dict.from_list |> label.from_dict |> should.be_ok
   let labels2 =
@@ -83,38 +79,28 @@ pub fn print_test() {
   let value1 = number.decimal(0.11)
   let value2 = number.integer(10)
   let value3 = number.decimal(0.001)
-  counter.new(store, "a_metric_total", "My first metric!")
+  counter.new("a_metric_total", "My first metric!")
   |> should.be_ok
-  counter.new(store, "another_metric_total", "My second metric!")
+  counter.new("another_metric_total", "My second metric!")
   |> should.be_ok
-  counter.new(store, "yet_another_metric_total", "My third metric!")
+  counter.new("yet_another_metric_total", "My third metric!")
   |> should.be_ok
 
-  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value1)
+  counter.increment_by("a_metric_total", labels |> label.to_dict, value1)
+  |> should.be_ok
+  counter.increment_by("a_metric_total", labels2 |> label.to_dict, value1)
+  |> should.be_ok
+  counter.increment_by("a_metric_total", labels |> label.to_dict, value2)
+  |> should.be_ok
+  counter.increment_by("another_metric_total", labels |> label.to_dict, value2)
   |> should.be_ok
   counter.increment_by(
-    store,
-    "a_metric_total",
-    labels2 |> label.to_dict,
-    value1,
-  )
-  |> should.be_ok
-  counter.increment_by(store, "a_metric_total", labels |> label.to_dict, value2)
-  |> should.be_ok
-  counter.increment_by(
-    store,
-    "another_metric_total",
-    labels |> label.to_dict,
-    value2,
-  )
-  |> should.be_ok
-  counter.increment_by(
-    store,
     "yet_another_metric_total",
     labels |> label.to_dict,
     value3,
   )
   |> should.be_ok
 
-  counter.print(store) |> should.be_ok |> should.equal(expected)
+  counter.print() |> should.be_ok |> should.equal(expected)
+  store.clear()
 }

@@ -1,5 +1,6 @@
 import gleam/dict.{type Dict}
 import gleam/dynamic
+import gleam/dynamic/decode
 import gleam/float
 import gleam/int
 import gleam/list
@@ -31,24 +32,33 @@ pub type Store {
   // - histogram_count_records
 }
 
-pub fn init() -> Store {
-  let metrics_table =
-    ets.new(ets.TableBuilder(ets.Set, ets.Public), "themis_metrics")
-  let records_table =
-    ets.new(ets.TableBuilder(ets.Set, ets.Public), "themis_records")
-  Store(metrics_table, records_table)
+const metrics_table_name = "themis_metrics"
+
+const records_table_name = "themis_records"
+
+pub fn init() {
+  let _metrics_table =
+    ets.new(ets.TableBuilder(ets.Set, ets.Public), metrics_table_name)
+  let _records_table =
+    ets.new(ets.TableBuilder(ets.Set, ets.Public), records_table_name)
+  // Store(metrics_table, records_table)
+}
+
+pub fn clear() {
+  let _true = ets.delete_table(metrics_table_name)
+  let _true = ets.delete_table(records_table_name)
 }
 
 pub fn new_metric(
-  store store: Store,
+  // store store: Store,
   name name: MetricName,
   description description: String,
   kind kind: String,
   buckets buckets: List(Float),
 ) -> Result(Nil, StoreError) {
-  let table = store.metrics
+  // let table = store.metrics
   ets.insert_new_raw(
-    table,
+    metrics_table_name,
     #(name |> metric.name_to_string, description, kind, buckets)
       |> dynamic.from,
   )
@@ -56,13 +66,16 @@ pub fn new_metric(
 }
 
 pub fn find_metric(
-  store store: Store,
+  // store store: Store,
   name name: MetricName,
   kind given_kind: String,
 ) -> Result(#(String, String, List(Float)), StoreError) {
-  let table = store.metrics
+  // let table = store.metrics
+  let assert Ok(metrics) =
+    ets.lookup(metrics_table_name, name |> metric.name_to_string)
+    as "should only return an error if the given table name string is not found as an atom. Are you sure you initialized the Themis store ?"
   use #(description, kind, buckets) <- result.try(case
-    ets.lookup(table, name |> metric.name_to_string)
+    metrics
     |> list.map(fn(found) {
       dynamic.tuple4(
         dynamic.string,
@@ -84,13 +97,15 @@ pub fn find_metric(
 }
 
 pub fn match_metrics(
-  store store: Store,
+  // store store: Store,
   kind kind: String,
 ) -> Result(List(#(String, String, List(Float))), StoreError) {
-  let table = store.metrics
-  ets.match_metric(table, kind)
+  // let table = store.metrics
+  let assert Ok(metrics) = ets.match_metric(metrics_table_name, kind)
+    as "should only return an error if the given table name string is not found as an atom. Are you sure you initialized the Themis store ?"
+
   // A "metric" is a 4-tuple #(name, description, type, buckets (buckets only for histograms))
-  |> list.map(fn(found) {
+  list.map(metrics, fn(found) {
     let r =
       dynamic.tuple4(
         dynamic.string,
@@ -107,7 +122,7 @@ pub fn match_metrics(
 }
 
 pub fn increment_record_by(
-  store store: Store,
+  // store store: Store,
   name name: MetricName,
   labels labels: LabelSet,
   by value: Number,
@@ -115,10 +130,13 @@ pub fn increment_record_by(
   case value {
     number.Dec(_) | number.Int(_) ->
       {
-        let table = store.records
+        // let table = store.records
         let labels = label.to_strings(labels)
         let name = metric.name_to_string(name)
-        ets.counter_increment_by(table, #(name, labels), value)
+        let assert Ok(r) =
+          ets.counter_increment_by(records_table_name, #(name, labels), value)
+          as "should only return an error if the given table name string is not found as an atom. Are you sure you initialized the Themis store ?"
+        r
       }
       |> Ok
     number.NaN | number.NegInf | number.PosInf -> Error(InvalidIncrement)
@@ -126,20 +144,20 @@ pub fn increment_record_by(
 }
 
 pub fn increment_record(
-  store store: Store,
+  // store store: Store,
   name name: MetricName,
   labels labels: LabelSet,
 ) -> Result(Nil, StoreError) {
-  increment_record_by(store, name, labels, number.integer(1))
+  increment_record_by(name, labels, number.integer(1))
 }
 
 pub fn insert_record(
-  store store: Store,
+  // store store: Store,
   name name: MetricName,
   labels labels: LabelSet,
   value value: Number,
 ) -> Result(Nil, StoreError) {
-  let table = store.records
+  // let table = store.records
   let labels = label.to_strings(labels)
   let #(int_value, float_value, flag_value) = case value {
     number.Dec(val) -> #(0, val, "")
@@ -148,42 +166,51 @@ pub fn insert_record(
     number.NegInf -> #(0, 0.0, "-Inf")
     number.NaN -> #(0, 0.0, "NaN")
   }
-  case
-    ets.insert_raw(table, #(
+  let assert Ok(r) =
+    ets.insert_raw(records_table_name, #(
       #(name |> metric.name_to_string, labels),
       int_value,
       float_value,
       flag_value,
     ))
-  {
+    as "should only return an error if the given table name string is not found as an atom. Are you sure you initialized the Themis store ?"
+
+  case r {
     False -> Error(InsertError)
     True -> Ok(Nil)
   }
 }
 
 pub fn match_records(
-  store store: Store,
+  // store store: Store,
   metric_name name: metric.MetricName,
 ) -> Result(Dict(LabelSet, Number), StoreError) {
-  let table = store.records
-  ets.match_record(table, name |> metric.name_to_string)
+  // let table = store.records
+  let assert Ok(records) =
+    ets.match_record(records_table_name, name |> metric.name_to_string)
+    as "should only return an error if the given table name string is not found as an atom. Are you sure you initialized the Themis store ?"
+
+  records
   |> list.map(decode_record)
   |> result.all
   |> result.map(dict.from_list)
 }
 
 pub fn find_record(
-  store store: Store,
+  // store store: Store,
   metric_name name: metric.MetricName,
   labels labels: LabelSet,
 ) -> Result(#(LabelSet, number.Number), StoreError) {
-  let table = store.records
-  case
-    ets.lookup(table, #(
+  // let table = store.records
+
+  let assert Ok(entries) =
+    ets.lookup(records_table_name, #(
       name |> metric.name_to_string,
       labels |> label.to_strings,
     ))
-  {
+    as "should only return an error if the given table name string is not found as an atom. Are you sure you initialized the Themis store ?"
+
+  case entries {
     [entry] -> Ok(entry)
     _ -> Error(SingleResultExpected)
   }

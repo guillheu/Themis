@@ -10,7 +10,7 @@
 ]).
 
 new(Name, Type, Access) ->
-    ets:new(Name, [Type, Access]).
+    ets:new(Name, [Type, Access, named_table]).
 
 info(Table) ->
     list_to_tuple(ets:info(Table)).

@@ -1,8 +1,11 @@
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
+
+// import gleam/dynamic/decode
 import gleam/erlang/atom.{type Atom}
 import gleam/erlang/process.{type Pid}
 import gleam/option.{type Option}
+import gleam/result
 import themis/number
 
 pub type TableBuilder {
@@ -46,13 +49,19 @@ pub type TableAccess {
 
 pub type Tid
 
-pub fn new(builder: TableBuilder, name: String) -> Table {
+pub type TableError {
+  AtomFromStringError(atom.FromStringError)
+  DecodeError(List(dynamic.DecodeError))
+  InsertFailed
+}
+
+pub fn new(builder: TableBuilder, name: String) -> Atom {
   atom.create_from_string(name)
   |> do_new(builder.table_type, builder.table_access)
 }
 
-pub fn info(table: Table) -> TableInfo {
-  let r = do_info(table)
+pub fn info(table_name: Atom) -> TableInfo {
+  let r = do_info(table_name)
   TableInfo(
     r.0.1,
     r.1.1,
@@ -72,64 +81,113 @@ pub fn info(table: Table) -> TableInfo {
   )
 }
 
-pub fn insert(table: Table, key: key, value: value) -> Bool {
-  do_insert(table, #(key, value) |> dynamic.from)
+pub fn insert(
+  table_name: String,
+  key: key,
+  value: value,
+) -> Result(Bool, TableError) {
+  use table_name_atom <- guard_atom_from_string(table_name)
+  Ok(do_insert(table_name_atom, #(key, value) |> dynamic.from))
 }
 
-pub fn insert_new_raw(table: Table, object: Dynamic) -> Result(Nil, Nil) {
-  let r = do_insert_new(table, object)
+pub fn insert_new_raw(
+  table_name: String,
+  object: Dynamic,
+) -> Result(Nil, TableError) {
+  use table_name_atom <- guard_atom_from_string(table_name)
+  let r = do_insert_new(table_name_atom, object)
   case r |> dynamic.bool {
-    Error(_) -> Error(Nil)
+    Error(e) -> Error(DecodeError(e))
     Ok(True) -> Ok(Nil)
-    Ok(False) -> Error(Nil)
+    Ok(False) -> Error(InsertFailed)
   }
 }
 
-pub fn insert_many(table: Table, to_insert: Dict(key, value)) -> Bool {
+pub fn insert_many(
+  table_name: String,
+  to_insert: Dict(key, value),
+) -> Result(Bool, TableError) {
   let objects =
     dict.to_list(to_insert)
     |> dynamic.from
-  do_insert(table, objects)
+
+  use table_name_atom <- guard_atom_from_string(table_name)
+  do_insert(table_name_atom, objects) |> Ok
 }
 
-pub fn insert_raw(table: Table, object: any) -> Bool {
-  do_insert(table, object)
+pub fn insert_raw(table_name: String, object: any) -> Result(Bool, TableError) {
+  use table_name_atom <- guard_atom_from_string(table_name)
+  do_insert(table_name_atom, object) |> Ok
 }
 
-pub fn lookup(table: Table, key: key) -> List(Dynamic) {
-  do_lookup(table, key)
+pub fn lookup(table_name: String, key: key) -> Result(List(Dynamic), TableError) {
+  use table_name_atom <- guard_atom_from_string(table_name)
+  do_lookup(table_name_atom, key) |> Ok
 }
 
-@external(erlang, "themis_external", "new")
-fn do_new(name: Atom, table_type: TableType, table_access: TableAccess) -> Table
-
-pub fn counter_increment_by(table: Table, key: any, by: number.Number) -> Nil {
+pub fn counter_increment_by(
+  table_name: String,
+  key: any,
+  by: number.Number,
+) -> Result(Nil, TableError) {
+  use table_name_atom <- guard_atom_from_string(table_name)
   case by {
-    number.Dec(val) -> do_counter_increment_by_decimal(table, key, val)
-    number.Int(val) -> do_counter_increment_by(table, key, val)
+    number.Dec(val) ->
+      do_counter_increment_by_decimal(table_name_atom, key, val)
+    number.Int(val) -> do_counter_increment_by(table_name_atom, key, val)
     number.NaN -> panic as "can not increment a counter by NaN"
     number.NegInf -> panic as "can not increment a counter by -Inf"
     number.PosInf -> panic as "can not increment a counter by +Inf"
   }
-  Nil
+  Nil |> Ok
 }
 
-pub fn counter_increment(table: Table, key: any) -> Nil {
-  do_counter_increment_by(table, key, 1)
-  Nil
+pub fn counter_increment(
+  table_name: String,
+  key: any,
+) -> Result(Nil, TableError) {
+  use table_name_atom <- guard_atom_from_string(table_name)
+  do_counter_increment_by(table_name_atom, key, 1)
+  Nil |> Ok
 }
 
-pub fn match_metric(table: Table, kind: kind) -> List(Dynamic) {
-  do_match_metric(table, kind)
+pub fn match_metric(
+  table_name: String,
+  kind: kind,
+) -> Result(List(Dynamic), TableError) {
+  use table_name_atom <- guard_atom_from_string(table_name)
+  do_match_metric(table_name_atom, kind) |> Ok
 }
 
-pub fn match_record(table: Table, name: String) -> List(Dynamic) {
-  do_match_record(table, name)
+pub fn match_record(
+  table_name: String,
+  name: String,
+) -> Result(List(Dynamic), TableError) {
+  use table_name_atom <- guard_atom_from_string(table_name)
+  do_match_record(table_name_atom, name) |> Ok
 }
+
+pub fn delete_table(table_name: String) -> Result(Bool, TableError) {
+  use table_name_atom <- guard_atom_from_string(table_name)
+  do_delete(table_name_atom) |> Ok
+}
+
+fn guard_atom_from_string(
+  table_name: String,
+  fun: fn(Atom) -> Result(a, TableError),
+) -> Result(a, TableError) {
+  let r =
+    atom.from_string(table_name)
+    |> result.map_error(fn(e) { AtomFromStringError(e) })
+  result.try(r, fun)
+}
+
+@external(erlang, "themis_external", "new")
+fn do_new(name: Atom, table_type: TableType, table_access: TableAccess) -> Atom
 
 @external(erlang, "themis_external", "info")
 fn do_info(
-  table: Table,
+  table: Atom,
 ) -> #(
   #(Atom, Tid),
   #(Atom, Bool),
@@ -149,26 +207,29 @@ fn do_info(
 )
 
 @external(erlang, "ets", "insert")
-fn do_insert(table: Table, object_or_objects: any) -> Bool
+fn do_insert(table: Atom, object_or_objects: any) -> Bool
 
 @external(erlang, "ets", "insert_new")
-fn do_insert_new(table: Table, object_or_objects: any) -> Dynamic
+fn do_insert_new(table: Atom, object_or_objects: any) -> Dynamic
 
 @external(erlang, "ets", "lookup")
-fn do_lookup(table: Table, key: id) -> List(Dynamic)
+fn do_lookup(table: Atom, key: id) -> List(Dynamic)
 
 @external(erlang, "themis_external", "counter_increment_by")
-fn do_counter_increment_by(table: Table, key: any, increment: Int) -> Nil
+fn do_counter_increment_by(table: Atom, key: any, increment: Int) -> Nil
 
 @external(erlang, "themis_external", "match_metric")
-fn do_match_metric(table: Table, kind: kind) -> List(Dynamic)
+fn do_match_metric(table: Atom, kind: kind) -> List(Dynamic)
 
 @external(erlang, "themis_external", "match_record")
-fn do_match_record(table: Table, name: String) -> List(Dynamic)
+fn do_match_record(table: Atom, name: String) -> List(Dynamic)
 
 @external(erlang, "themis_external", "counter_increment_by_decimal")
 fn do_counter_increment_by_decimal(
-  table: Table,
+  table: Atom,
   key: any,
   increment: Float,
 ) -> Nil
+
+@external(erlang, "ets", "delete")
+fn do_delete(table: Atom) -> Bool

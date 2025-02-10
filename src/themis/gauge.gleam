@@ -4,7 +4,7 @@ import gleam/result
 import gleam/string_tree
 import themis/internal/label
 import themis/internal/metric
-import themis/internal/store.{type Store}
+import themis/internal/store
 import themis/number.{type Number}
 
 pub type GaugeError {
@@ -19,7 +19,7 @@ const blacklist = ["gauge"]
 /// Will return an error if the metric name is invalid
 /// or already used by another metric.
 pub fn new(
-  store store: Store,
+  // store store: Store,
   name name: String,
   description description: String,
 ) -> Result(Nil, GaugeError) {
@@ -29,7 +29,6 @@ pub fn new(
   )
   let buckets = []
   use store_error <- result.try_recover(store.new_metric(
-    store,
     name,
     description,
     "gauge",
@@ -44,7 +43,7 @@ pub fn new(
 /// Will return an error if any of the labels have an invalid key.
 /// NaN, PosInf and NegInf values are valid but not recommended.
 pub fn observe(
-  store store: Store,
+  // store store: Store,
   name name: String,
   labels labels: Dict(String, String),
   value value: Number,
@@ -54,24 +53,19 @@ pub fn observe(
     |> result.map_error(fn(e) { MetricError(e) }),
   )
   use _ <- result.try(
-    store.find_metric(store, name, "gauge")
+    store.find_metric(name, "gauge")
     |> result.map_error(fn(e) { StoreError(e) }),
   )
   use labels <- result.try(
     label.from_dict(labels) |> result.map_error(fn(e) { LabelError(e) }),
   )
-  use store_error <- result.map_error(store.insert_record(
-    store,
-    name,
-    labels,
-    value,
-  ))
+  use store_error <- result.map_error(store.insert_record(name, labels, value))
   StoreError(store_error)
 }
 
-pub fn print(store store: Store) -> Result(String, GaugeError) {
+pub fn print() -> Result(String, GaugeError) {
   use metrics <- result.try(
-    store.match_metrics(store, "gauge")
+    store.match_metrics("gauge")
     |> result.try_recover(fn(e) { Error(StoreError(e)) }),
   )
   let r = {
@@ -84,7 +78,7 @@ pub fn print(store store: Store) -> Result(String, GaugeError) {
       |> result.map_error(fn(e) { MetricError(e) }),
     )
     use metric_records <- result.try(
-      store.match_records(store, name)
+      store.match_records(name)
       |> result.map_error(fn(e) { StoreError(e) }),
     )
     let help_string = "# HELP " <> name_string <> " " <> description <> "\n"
