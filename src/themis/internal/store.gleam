@@ -14,7 +14,8 @@ import themis/number.{type Number}
 pub type StoreError {
   MetricNameAlreadyExists
   InsertError
-  DecodeErrors(List(dynamic.DecodeError))
+  DecodeErrors(List(decode.DecodeError))
+  OldDecodeErrors(List(dynamic.DecodeError))
   TableError
   InvalidIncrement
   SingleResultExpected
@@ -76,14 +77,7 @@ pub fn find_metric(
     as "should only return an error if the given table name string is not found as an atom. Are you sure you initialized the Themis store ?"
   use #(description, kind, buckets) <- result.try(case
     metrics
-    |> list.map(fn(found) {
-      dynamic.tuple4(
-        dynamic.string,
-        dynamic.string,
-        dynamic.string,
-        dynamic.list(dynamic.float),
-      )(found)
-    })
+    |> list.map(fn(found) { decode_metric(found) })
   {
     [Ok(#(_name, description, kind, buckets))] ->
       Ok(#(description, kind, buckets))
@@ -107,12 +101,7 @@ pub fn match_metrics(
   // A "metric" is a 4-tuple #(name, description, type, buckets (buckets only for histograms))
   list.map(metrics, fn(found) {
     let r =
-      dynamic.tuple4(
-        dynamic.string,
-        dynamic.string,
-        dynamic.string,
-        dynamic.list(dynamic.float),
-      )(found)
+      decode_metric(found)
       |> result.try_recover(fn(e) { Error(DecodeErrors(e)) })
     use #(name, description, _type, buckets) <- result.try(r)
     #(name, description, buckets)
@@ -191,7 +180,7 @@ pub fn match_records(
     as "should only return an error if the given table name string is not found as an atom. Are you sure you initialized the Themis store ?"
 
   records
-  |> list.map(decode_record)
+  |> list.map(parse_record)
   |> result.all
   |> result.map(dict.from_list)
 }
@@ -214,21 +203,56 @@ pub fn find_record(
     [entry] -> Ok(entry)
     _ -> Error(SingleResultExpected)
   }
-  |> result.try(decode_record)
+  |> result.try(parse_record)
+}
+
+fn decode_metric(
+  metric: dynamic.Dynamic,
+) -> Result(#(String, String, String, List(Float)), List(decode.DecodeError)) {
+  use field_1 <- result.try(decode.run(metric, decode.at([0], decode.string)))
+  use field_2 <- result.try(decode.run(metric, decode.at([1], decode.string)))
+  use field_3 <- result.try(decode.run(metric, decode.at([2], decode.string)))
+  use field_4 <- result.try(decode.run(
+    metric,
+    decode.at([3], decode.list(decode.float)),
+  ))
+  Ok(#(field_1, field_2, field_3, field_4))
 }
 
 fn decode_record(
+  record: dynamic.Dynamic,
+) -> Result(
+  #(#(String, List(String)), Int, Float, String),
+  List(decode.DecodeError),
+) {
+  use field_1_1 <- result.try(decode.run(
+    record,
+    decode.at([0, 0], decode.string),
+  ))
+  use field_1_2 <- result.try(decode.run(
+    record,
+    decode.at([0, 1], decode.list(decode.string)),
+  ))
+  use field_2 <- result.try(decode.run(record, decode.at([1], decode.int)))
+  use field_3 <- result.try(decode.run(record, decode.at([2], decode.float)))
+  use field_4 <- result.try(decode.run(record, decode.at([3], decode.string)))
+  Ok(#(#(field_1_1, field_1_2), field_2, field_3, field_4))
+}
+
+fn parse_record(
   record: dynamic.Dynamic,
 ) -> Result(#(LabelSet, Number), StoreError) {
   // A "record" is a 4-tuple #(#(name, labels), int_value, float_value, flag)
   // labels are a list of string. a key-value label is a single string: "key:value"
   let record_result =
-    dynamic.tuple4(
-      dynamic.tuple2(dynamic.string, dynamic.list(dynamic.string)),
-      dynamic.int,
-      dynamic.float,
-      dynamic.string,
-    )(record)
+    decode_record(record)
+    // let record_result =
+    //   dynamic.tuple4(
+    //     dynamic.tuple2(dynamic.string, dynamic.list(dynamic.string)),
+    //     dynamic.int,
+    //     dynamic.float,
+    //     dynamic.string,
+    //   )(record)
     |> result.try_recover(fn(e) { Error(DecodeErrors(e)) })
   use record <- result.try(record_result)
   let #(#(_name, labels), int_value, float_value, flag) = record

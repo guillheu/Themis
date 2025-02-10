@@ -1,9 +1,11 @@
 import gleam/dict
 import gleam/dynamic
+import gleam/dynamic/decode
 import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/list
 import gleam/option.{None}
+import gleam/result
 import gleeunit/should
 import themis/internal/erlang/ets
 import themis/number
@@ -180,12 +182,7 @@ fn check_entry(
   let assert Ok([dyn]) = ets.lookup(table, key)
   let #(k, value_int, value_float, flag) =
     dyn
-    |> dynamic.tuple4(
-      dynamic.dynamic,
-      dynamic.int,
-      dynamic.float,
-      dynamic.string,
-    )
+    |> decode_record
     |> should.be_ok
   k
   |> should.equal(key |> dynamic.from)
@@ -195,4 +192,14 @@ fn check_entry(
   |> should.equal(val_float)
   flag
   |> should.equal(val_flag)
+}
+
+fn decode_record(
+  record: dynamic.Dynamic,
+) -> Result(#(dynamic.Dynamic, Int, Float, String), List(decode.DecodeError)) {
+  use field_1 <- result.try(decode.run(record, decode.at([0], decode.dynamic)))
+  use field_2 <- result.try(decode.run(record, decode.at([1], decode.int)))
+  use field_3 <- result.try(decode.run(record, decode.at([2], decode.float)))
+  use field_4 <- result.try(decode.run(record, decode.at([3], decode.string)))
+  Ok(#(field_1, field_2, field_3, field_4))
 }

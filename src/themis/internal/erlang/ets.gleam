@@ -1,5 +1,6 @@
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode
 
 // import gleam/dynamic/decode
 import gleam/erlang/atom.{type Atom}
@@ -51,7 +52,7 @@ pub type Tid
 
 pub type TableError {
   AtomFromStringError(atom.FromStringError)
-  DecodeError(List(dynamic.DecodeError))
+  DecodeError(List(decode.DecodeError))
   InsertFailed
 }
 
@@ -96,7 +97,7 @@ pub fn insert_new_raw(
 ) -> Result(Nil, TableError) {
   use table_name_atom <- guard_atom_from_string(table_name)
   let r = do_insert_new(table_name_atom, object)
-  case r |> dynamic.bool {
+  case decode.run(r, decode.bool) {
     Error(e) -> Error(DecodeError(e))
     Ok(True) -> Ok(Nil)
     Ok(False) -> Error(InsertFailed)
