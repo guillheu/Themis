@@ -10,7 +10,11 @@
 ]).
 
 new(Name, Type, Access) ->
-    ets:new(Name, [Type, Access, named_table]).
+    case ets:info(Name) of
+        undefined ->
+            ets:new(Name, [Type, Access, named_table]);
+        _ -> ok
+    end.
 
 info(Table) ->
     list_to_tuple(ets:info(Table)).
