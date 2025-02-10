@@ -4,7 +4,7 @@ target = "erlang"
 description = "Prometheus client in pure Gleam!"
 licences = ["MIT"]
 repository = { type = "github", user = "guillheu", repo = "Themis" }
-internal_modules = ["internal/*"]
+internal_modules = ["themis/internal/*"]
 
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.
