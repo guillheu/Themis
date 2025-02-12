@@ -72,9 +72,13 @@ pub fn find_metric(
   kind given_kind: String,
 ) -> Result(#(String, String, List(Float)), StoreError) {
   // let table = store.metrics
-  let assert Ok(metrics) =
-    ets.lookup(metrics_table_name, name |> metric.name_to_string)
-    as "should only return an error if the given table name string is not found as an atom. Are you sure you initialized the Themis store ?"
+  let name_string = metric.name_to_string(name)
+  let assert Ok(metrics) = ets.lookup(metrics_table_name, name_string)
+    as {
+    "could not find metric \""
+    <> name_string
+    <> "\". should only return an error if the given table name string is not found as an atom. Are you sure you initialized the Themis store ?"
+  }
   use #(description, kind, buckets) <- result.try(case
     metrics
     |> list.map(fn(found) { decode_metric(found) })
