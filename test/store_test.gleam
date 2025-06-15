@@ -8,7 +8,7 @@ import themis/internal/store
 import themis/number
 
 pub fn new_metric_test() {
-  let store = store.init()
+  let _store = store.init()
   let name = "a_name" |> metric.new_name([]) |> should.be_ok
   let name2 = "another_name" |> metric.new_name([]) |> should.be_ok
   store.new_metric(name, "a metric", "gauge", []) |> should.be_ok
@@ -18,7 +18,7 @@ pub fn new_metric_test() {
 }
 
 pub fn match_metrics_test() {
-  let store = store.init()
+  let _store = store.init()
   store.new_metric(
     "a_name" |> metric.new_name([]) |> should.be_ok,
     "a new metric",
@@ -59,7 +59,7 @@ pub fn match_metrics_test() {
 }
 
 pub fn match_records_test() {
-  let store = store.init()
+  let _store = store.init()
   let labels1 =
     [#("foo", "bar")] |> dict.from_list |> label.from_dict |> should.be_ok
   let labels2 =
@@ -155,7 +155,7 @@ pub fn match_records_test() {
 }
 
 pub fn increment_record_by_test() {
-  let store = store.init()
+  let _store = store.init()
   let name = "a_name" |> metric.new_name([]) |> should.be_ok
   store.new_metric(name, "a metric", "gauge", []) |> should.be_ok
 

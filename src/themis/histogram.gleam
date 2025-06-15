@@ -262,8 +262,6 @@ fn group_histogram_records(
   // Dict of labels, value = #(buckets, sum, count)
 ) -> Dict(LabelSet, #(Dict(String, Number), Number, Number)) {
   // 1: extract LE labels from buckets: Dict(LabelSet, Dict(String, Number))
-  buckets
-  |> dict.to_list
   use result, bucket_entry <- list.fold(buckets |> dict.to_list(), dict.new())
   let #(bucket_labels, bucket_value) = bucket_entry
   let #(le_value, bucket_labels) =

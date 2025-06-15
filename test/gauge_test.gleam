@@ -18,7 +18,7 @@ pub fn new_test() {
 }
 
 pub fn observe_test() {
-  let store = store.init()
+  let _store = store.init()
   gauge.new("a_metric", "My first metric!")
   |> should.be_ok
 

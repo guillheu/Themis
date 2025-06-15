@@ -15,7 +15,6 @@ pub type StoreError {
   MetricNameAlreadyExists
   InsertError
   DecodeErrors(List(decode.DecodeError))
-  OldDecodeErrors(List(dynamic.DecodeError))
   TableError
   InvalidIncrement
   SingleResultExpected
@@ -79,15 +78,17 @@ pub fn find_metric(
     <> name_string
     <> "\". should only return an error if the given table name string is not found as an atom. Are you sure you initialized the Themis store ?"
   }
-  use #(description, kind, buckets) <- result.try(case
-    metrics
-    |> list.map(fn(found) { decode_metric(found) })
-  {
-    [Ok(#(_name, description, kind, buckets))] ->
-      Ok(#(description, kind, buckets))
-    [] -> Error(MetricNotFound)
-    _ -> Error(TableError)
-  })
+  use #(description, kind, buckets) <- result.try(
+    case
+      metrics
+      |> list.map(fn(found) { decode_metric(found) })
+    {
+      [Ok(#(_name, description, kind, buckets))] ->
+        Ok(#(description, kind, buckets))
+      [] -> Error(MetricNotFound)
+      _ -> Error(TableError)
+    },
+  )
   case kind == given_kind {
     False -> Error(InvalidType)
     True -> Ok(#(description, kind, buckets))

@@ -38,7 +38,7 @@ pub fn new_test() {
 }
 
 pub fn observe_test() {
-  let store = store.init()
+  let _store = store.init()
   let name = "a_metric"
   let #(bucket_name, count_name, sum_name) =
     metric.make_histogram_metric_names(
