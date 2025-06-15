@@ -73,8 +73,7 @@ pub fn print_test() {
   store.init()
   let labels =
     [#("foo", "bar")] |> dict.from_list |> label.from_dict |> should.be_ok
-  let labels2 =
-    [#("wibble", "wobble")] |> dict.from_list |> label.from_dict |> should.be_ok
+  let labels2 = dict.new() |> label.from_dict |> should.be_ok
 
   let value1 = number.decimal(0.11)
   let value2 = number.integer(10)
@@ -101,6 +100,6 @@ pub fn print_test() {
   )
   |> should.be_ok
 
-  counter.print() |> should.be_ok |> should.equal(expected)
+  assert counter.print() |> should.be_ok == expected
   store.clear()
 }

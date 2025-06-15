@@ -5,8 +5,8 @@ another_metric_total{foo="bar"} 10
 
 # TYPE a_metric_total counter
 # HELP a_metric_total My first metric!
+a_metric_total 0.11
 a_metric_total{foo="bar"} 10.11
-a_metric_total{wibble="wobble"} 0.11
 
 # TYPE yet_another_metric_total counter
 # HELP yet_another_metric_total My third metric!

@@ -76,15 +76,19 @@ pub fn delete_label(
 }
 
 pub fn print(labels labels: LabelSet) -> String {
+  case
+    {
+      use current, name, value <- dict.fold(labels.labels, ["{"])
+      [name.name <> "=\"" <> value <> "\",", ..current]
+    }
+    |> list.reverse
+    |> string_tree.from_strings
+    |> string_tree.to_string
+    |> string.drop_end(1)
   {
-    use current, name, value <- dict.fold(labels.labels, ["{"])
-    [name.name <> "=\"" <> value <> "\",", ..current]
+    "" -> ""
+    not_empty -> not_empty <> "}"
   }
-  |> list.reverse
-  |> string_tree.from_strings
-  |> string_tree.to_string
-  |> string.drop_end(1)
-  |> string.append("}")
 }
 
 fn new_label_name(from: String) -> Result(LabelName, LabelError) {
