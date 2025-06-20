@@ -51,13 +51,13 @@ pub type TableAccess {
 pub type Tid
 
 pub type TableError {
-  AtomFromStringError(atom.FromStringError)
+  AtomFromStringError
   DecodeError(List(decode.DecodeError))
   InsertFailed
 }
 
 pub fn new(builder: TableBuilder, name: String) -> Atom {
-  atom.create_from_string(name)
+  atom.create(name)
   |> do_new(builder.table_type, builder.table_access)
 }
 
@@ -178,8 +178,8 @@ fn guard_atom_from_string(
   fun: fn(Atom) -> Result(a, TableError),
 ) -> Result(a, TableError) {
   let r =
-    atom.from_string(table_name)
-    |> result.map_error(fn(e) { AtomFromStringError(e) })
+    atom.get(table_name)
+    |> result.map_error(fn(e) { AtomFromStringError })
   result.try(r, fun)
 }
 

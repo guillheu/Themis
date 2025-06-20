@@ -13,7 +13,7 @@ import themis/number
 pub fn counter_test() {
   let _table = ets.new(ets.TableBuilder(ets.Set, ets.Private), "test_table")
   let table = "test_table"
-  let table_info = ets.info(table |> atom.from_string |> should.be_ok)
+  let table_info = ets.info(table |> atom.get |> should.be_ok)
 
   table_info
   |> should.equal(
@@ -26,9 +26,9 @@ pub fn counter_test() {
       memory: 305,
       owner: process.self(),
       heir: None,
-      name: "test_table" |> atom.create_from_string,
+      name: "test_table" |> atom.create,
       size: 0,
-      node: "nonode@nohost" |> atom.create_from_string,
+      node: "nonode@nohost" |> atom.create,
       named_table: True,
       table_type: ets.Set,
       keypos: 1,
