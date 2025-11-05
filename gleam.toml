@@ -1,5 +1,5 @@
 name = "themis"
-version = "4.0.0"
+version = "4.1.0"
 target = "erlang"
 description = "Prometheus client in pure Gleam!"
 licences = ["MIT"]
@@ -15,7 +15,7 @@ internal_modules = ["themis/internal/*"]
 # https://gleam.run/writing-gleam/gleam-toml/.
 
 [dependencies]
-gleam_stdlib = ">= 0.34.0 and < 2.0.0"
+gleam_stdlib = ">= 0.65.0 and < 2.0.0"
 gleam_regexp = ">= 1.0.0 and < 2.0.0"
 gleam_erlang = ">= 1.0.0 and < 2.0.0"
 
