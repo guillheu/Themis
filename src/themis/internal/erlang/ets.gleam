@@ -88,19 +88,17 @@ pub fn insert(
   value: value,
 ) -> Result(Bool, TableError) {
   use table_name_atom <- guard_atom_from_string(table_name)
-  Ok(do_insert(table_name_atom, #(key, value) |> dynamic.from))
+  Ok(do_insert(table_name_atom, #(key, value)))
 }
 
 pub fn insert_new_raw(
   table_name: String,
-  object: Dynamic,
+  object: #(String, String, String, List(Float)),
 ) -> Result(Nil, TableError) {
   use table_name_atom <- guard_atom_from_string(table_name)
-  let r = do_insert_new(table_name_atom, object)
-  case decode.run(r, decode.bool) {
-    Error(e) -> Error(DecodeError(e))
-    Ok(True) -> Ok(Nil)
-    Ok(False) -> Error(InsertFailed)
+  case do_insert_new(table_name_atom, object) {
+    True -> Ok(Nil)
+    False -> Error(InsertFailed)
   }
 }
 
@@ -108,9 +106,7 @@ pub fn insert_many(
   table_name: String,
   to_insert: Dict(key, value),
 ) -> Result(Bool, TableError) {
-  let objects =
-    dict.to_list(to_insert)
-    |> dynamic.from
+  let objects = dict.to_list(to_insert)
 
   use table_name_atom <- guard_atom_from_string(table_name)
   do_insert(table_name_atom, objects) |> Ok
@@ -179,7 +175,7 @@ fn guard_atom_from_string(
 ) -> Result(a, TableError) {
   let r =
     atom.get(table_name)
-    |> result.map_error(fn(e) { AtomFromStringError })
+    |> result.replace_error(AtomFromStringError)
   result.try(r, fun)
 }
 
@@ -211,7 +207,7 @@ fn do_info(
 fn do_insert(table: Atom, object_or_objects: any) -> Bool
 
 @external(erlang, "ets", "insert_new")
-fn do_insert_new(table: Atom, object_or_objects: any) -> Dynamic
+fn do_insert_new(table: Atom, object_or_objects: any) -> Bool
 
 @external(erlang, "ets", "lookup")
 fn do_lookup(table: Atom, key: id) -> List(Dynamic)

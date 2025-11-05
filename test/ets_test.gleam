@@ -51,10 +51,7 @@ pub fn counter_test() {
   ets.counter_increment_by(table, #("a_metric", labels), number.integer(1))
   |> should.be_ok
   check_entry(table, #("a_metric", labels), 1, 0.0, "")
-  ets.insert_raw(
-    table,
-    #(#("a_metric", labels), 0, 0.0, "toto") |> dynamic.from,
-  )
+  ets.insert_raw(table, #(#("a_metric", labels), 0, 0.0, "toto"))
   |> should.be_ok
   ets.counter_increment_by(table, #("a_metric", labels), number.decimal(1.0))
   |> should.be_ok
@@ -74,11 +71,11 @@ pub type Something {
 pub fn match_metric_test() {
   let _table = ets.new(ets.TableBuilder(ets.Set, ets.Private), "test_table")
   let table = "test_table"
-  ets.insert_raw(table, #("foo", "lol", Somewhere, Nil) |> dynamic.from)
+  ets.insert_raw(table, #("foo", "lol", Somewhere, Nil))
   |> should.be_ok
   ets.match_metric(table, Somewhere)
   |> should.equal(ets.lookup(table, "foo"))
-  ets.insert_raw(table, #("bar", "xd", Somewhere, Somewhat) |> dynamic.from)
+  ets.insert_raw(table, #("bar", "xd", Somewhere, Somewhat))
   |> should.be_ok
 
   ets.match_metric(table, Somewhere)
@@ -88,7 +85,7 @@ pub fn match_metric_test() {
     |> should.be_ok
     |> list.append(ets.lookup(table, "bar") |> should.be_ok),
   )
-  ets.insert_raw(table, #("baz", "mdr", Someone, Somewhat) |> dynamic.from)
+  ets.insert_raw(table, #("baz", "mdr", Someone, Somewhat))
   |> should.be_ok
   ets.match_metric(table, Somewhere)
   |> should.be_ok
@@ -108,23 +105,14 @@ pub fn match_record_test() {
   let labels1 = dict.from_list([#("foo", "bar")])
   let labels2 = dict.from_list([#("wibble", "wobble")])
   let labels3 = dict.from_list([#("toto", "tata")])
-  ets.insert_raw(
-    table,
-    #(#("a_metric_name", labels1), 10, 0.5, Nil) |> dynamic.from,
-  )
+  ets.insert_raw(table, #(#("a_metric_name", labels1), 10, 0.5, Nil))
   |> should.be_ok
   ets.match_record(table, "a_metric_name")
   |> should.equal(ets.lookup(table, #("a_metric_name", labels1)))
 
-  ets.insert_raw(
-    table,
-    #(#("a_metric_name", labels2), 5, 10.6, Nil) |> dynamic.from,
-  )
+  ets.insert_raw(table, #(#("a_metric_name", labels2), 5, 10.6, Nil))
   |> should.be_ok
-  ets.insert_raw(
-    table,
-    #(#("a_different_metric_name", labels3), 69, 4.2, Nil) |> dynamic.from,
-  )
+  ets.insert_raw(table, #(#("a_different_metric_name", labels3), 69, 4.2, Nil))
   |> should.be_ok
 
   ets.match_record(table, "a_metric_name")
@@ -185,7 +173,7 @@ fn check_entry(
     |> decode_record
     |> should.be_ok
   k
-  |> should.equal(key |> dynamic.from)
+  |> should.equal(key |> to_dynamic)
   value_int
   |> should.equal(val_int)
   value_float
@@ -203,3 +191,6 @@ fn decode_record(
   use field_4 <- result.try(decode.run(record, decode.at([3], decode.string)))
   Ok(#(field_1, field_2, field_3, field_4))
 }
+
+@external(erlang, "themis_external", "identity")
+fn to_dynamic(from: any) -> dynamic.Dynamic

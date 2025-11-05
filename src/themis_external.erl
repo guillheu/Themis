@@ -6,7 +6,8 @@
     counter_increment_by/3,
     counter_increment_by_decimal/3,
     match_metric/2,
-    match_record/2
+    match_record/2,
+    identity/1
 ]).
 
 new(Name, Type, Access) ->
@@ -39,3 +40,6 @@ match_metric(Tab, Type) ->
 match_record(Tab, Name) ->
     Pattern = {{Name, '_'}, '_', '_', '_'},
     ets:match_object(Tab, Pattern).
+
+identity(X) -> 
+    X.

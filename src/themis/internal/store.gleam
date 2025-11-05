@@ -57,11 +57,12 @@ pub fn new_metric(
   buckets buckets: List(Float),
 ) -> Result(Nil, StoreError) {
   // let table = store.metrics
-  ets.insert_new_raw(
-    metrics_table_name,
-    #(name |> metric.name_to_string, description, kind, buckets)
-      |> dynamic.from,
-  )
+  ets.insert_new_raw(metrics_table_name, #(
+    name |> metric.name_to_string,
+    description,
+    kind,
+    buckets,
+  ))
   |> result.replace_error(MetricNameAlreadyExists)
 }
 

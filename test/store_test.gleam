@@ -85,7 +85,7 @@ pub fn match_records_test() {
   |> should.be_ok
   |> should.equal([
     #(#("a_metric", ["foo:bar"]), 10, 0.0, "")
-    |> dynamic.from,
+    |> to_dynamic,
   ])
   store.match_records(name1)
   |> should.be_ok
@@ -109,7 +109,7 @@ pub fn match_records_test() {
   |> should.be_ok
   |> should.equal([
     #(#("a_metric", ["wibble:wobble"]), 0, 20.1, "")
-    |> dynamic.from,
+    |> to_dynamic,
   ])
   store.match_records(name2)
   |> should.be_ok
@@ -138,7 +138,7 @@ pub fn match_records_test() {
   |> should.be_ok
   |> should.equal([
     #(#("another_metric", ["toto:tata"]), 0, 0.0, "+Inf")
-    |> dynamic.from,
+    |> to_dynamic,
   ])
   store.match_records(name3)
   |> should.be_ok
@@ -176,3 +176,6 @@ pub fn increment_record_by_test() {
   |> should.equal([#(labels, number.decimal(25.6))] |> dict.from_list)
   store.clear()
 }
+
+@external(erlang, "themis_external", "identity")
+fn to_dynamic(from: any) -> dynamic.Dynamic
