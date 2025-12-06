@@ -29,45 +29,48 @@ pub fn main() {
   // initialize the metrics store
   themis.init()
 
+  // ------------------------------------------------------------------
   // Gauge
+  // ------------------------------------------------------------------
 
+  // NOTES:
   // This can fail if the metric name is invalid
-  let assert Ok(_) =
-    gauge.new(
-      "my_first_metric",
-      "A gauge Prometheus metric",
-    )
+  // See discussion [here](https://github.com/guillheu/Themis/issues/5)
+  // Summary: 'gauge' is blacklisted for a metric name
+  let assert Ok(_) = gauge.new("gge_01", "My first Prometheus 'gauge' metric")
 
   let labels = dict.from_list([#("foo", "bar")])
   let value = number.integer(10)
-  let assert Ok(_) =
-    gauge.observe("my_first_metric", labels, value)
+  let assert Ok(_) = gauge.observe("gge_01", labels, value)
 
+  // ------------------------------------------------------------------
   // Counter
-
+  // ------------------------------------------------------------------
+  // NOTES:
+  // This can fail if the metric name is invalid
+  // See discussion [here](https://github.com/guillheu/Themis/issues/5)
+  // Summary: 'counter' is blacklisted for a metric name
+  // Summary: counter metric names must end with '_total'
   let assert Ok(_) =
-    counter.new(
-      "my_second_metric",
-      "A counter Prometheus metric",
-    )
-
+    counter.new("cntr_01_total", "My first Prometheus 'counter' metric")
   let labels = dict.from_list([#("wibble", "wobble")])
   let other_labels = dict.from_list([#("wii", "woo")])
   let assert Ok(_) =
-    counter.new("my_second_metric", "A counter Prometheus metric")
+    counter.new("cntr_02_total", "My second Prometheus 'counter' metric")
+  let assert Ok(_) = counter.increment("cntr_02_total", labels)
   let assert Ok(_) =
-    counter.increment("my_second_metric", labels)
-  let assert Ok(_) =
-    counter.increment_by(
-      "my_second_metric",
-      other_labels,
-      number.decimal(1.2),
-    )
+    counter.increment_by("cntr_02_total", other_labels, number.decimal(1.2))
 
+  // ------------------------------------------------------------------
   // Histogram
-
+  // ------------------------------------------------------------------
+  //
+  // NOTES:
   // Histograms work with buckets. Each bucket needs an upper boundary.
   // Read more about histograms here https://prometheus.io/docs/practices/histograms/
+  // This can fail if the metric name is invalid
+  // See discussion [here](https://github.com/guillheu/Themis/issues/5)
+  // Summary: 'histogram' is blacklisted for a metric name
   let buckets =
     set.from_list([
       number.decimal(0.05),
@@ -77,65 +80,65 @@ pub fn main() {
       number.integer(1),
     ])
   let assert Ok(_) =
-    histogram.new(
-      "my_third_metric",
-      "A histogram Prometheus metric",
-      buckets,
-    )
+    histogram.new("hgm_01", "My first Prometheus 'histogram' metric", buckets)
 
-  let value = number.integer(20)
-  let other_value = number.decimal(1.5)
-  let labels = dict.from_list([#("toto", "tata")])
-  let other_labels = dict.from_list([#("toto", "titi")])
-  let assert Ok(_) =
-    histogram.observe("my_third_metric", labels, value)
-  // When incrementing a histogram with new labels, a new histogram will automatically be initialized
-  let assert Ok(_) =
-    histogram.observe(
-      "my_third_metric",
-      other_labels,
-      other_value,
-    )
+    let value = number.integer(20)
+    let other_value = number.decimal(1.5)
+    let labels = dict.from_list([#("toto", "tata")])
+    let other_labels = dict.from_list([#("toto", "titi")])
+    let assert Ok(_) =
+      histogram.observe("hgm_01", labels, value)
+    // When incrementing a histogram with new labels, a new histogram will automatically be initialized
+    let assert Ok(_) =
+      histogram.observe(
+        "hgm_01",
+        other_labels,
+        other_value,
+      )
 
-  // Printing all the metrics as a Prometheus-scrapable String
+  //  // Printing all the metrics as a Prometheus-scrapable String
   let assert Ok(prometheus_string) = themis.print()
   io.println(prometheus_string)
 }
-
 ```
 
 This code will print the following prometheus-compatible metrics:
 
 ```
-# HELP my_first_metric A gauge Prometheus metric
-# TYPE my_first_metric gauge
-my_first_metric{foo="bar"} 10
+# TYPE gge_01 gauge
+# HELP gge_01 My first Prometheus 'gauge' metric
+gge_01{foo="bar"} 10
 
-# HELP my_second_metric_total A counter Prometheus metric
-# TYPE my_second_metric_total counter
-my_second_metric_total{wibble="wobble"} 1
-my_second_metric_total{wii="woo"} 1.2
 
-# HELP my_third_metric A histogram Prometheus metric
-# TYPE my_third_metric histogram
-my_third_metric_bucket{le="0.05",toto="tata"} 0
-my_third_metric_bucket{le="0.1",toto="tata"} 0
-my_third_metric_bucket{le="0.25",toto="tata"} 0
-my_third_metric_bucket{le="0.5",toto="tata"} 0
-my_third_metric_bucket{le="1",toto="tata"} 0
-my_third_metric_bucket{le="+Inf",toto="tata"} 1
-my_third_metric_sum{toto="tata"} 1
-my_third_metric_count{toto="tata"} 1
+# TYPE cntr_02_total counter
+# HELP cntr_02_total My second Prometheus 'counter' metric
+cntr_02_total{wibble="wobble"} 1
+cntr_02_total{wii="woo"} 1.2
 
-my_third_metric_bucket{le="0.05",toto="titi"} 0
-my_third_metric_bucket{le="0.1",toto="titi"} 0
-my_third_metric_bucket{le="0.25",toto="titi"} 0
-my_third_metric_bucket{le="0.5",toto="titi"} 0
-my_third_metric_bucket{le="1",toto="titi"} 0
-my_third_metric_bucket{le="+Inf",toto="titi"} 1
-my_third_metric_sum{toto="titi"} 1
-my_third_metric_count{toto="titi"} 1
+# TYPE cntr_01_total counter
+# HELP cntr_01_total My first Prometheus 'counter' metric
 
+
+# TYPE hgm_01 histogram
+# HELP hgm_01 My first Prometheus 'histogram' metric
+
+hgm_01_count{toto="titi"} 1
+hgm_01_sum{toto="titi"} 1.5
+hgm_01_bucket{le="+Inf",toto="titi"} 1
+hgm_01_bucket{le="0.05",toto="titi"} 0
+hgm_01_bucket{le="0.1",toto="titi"} 0
+hgm_01_bucket{le="0.25",toto="titi"} 0
+hgm_01_bucket{le="0.5",toto="titi"} 0
+hgm_01_bucket{le="1",toto="titi"} 0
+
+hgm_01_count{toto="tata"} 1
+hgm_01_sum{toto="tata"} 20
+hgm_01_bucket{le="+Inf",toto="tata"} 1
+hgm_01_bucket{le="0.05",toto="tata"} 0
+hgm_01_bucket{le="0.1",toto="tata"} 0
+hgm_01_bucket{le="0.25",toto="tata"} 0
+hgm_01_bucket{le="0.5",toto="tata"} 0
+hgm_01_bucket{le="1",toto="tata"} 0
 ```
 
 Further documentation can be found at <https://hexdocs.pm/themis>.
