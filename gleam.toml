@@ -1,5 +1,5 @@
 name = "themis"
-version = "4.1.0"
+version = "4.1.1"
 target = "erlang"
 description = "Prometheus client in pure Gleam!"
 licences = ["MIT"]

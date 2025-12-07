@@ -45,21 +45,20 @@ pub fn main() {
 
   // Counter
 
+  // Counter metric names must end with "_total"
   let assert Ok(_) =
     counter.new(
-      "my_second_metric",
+      "my_second_metric_total",
       "A counter Prometheus metric",
     )
 
   let labels = dict.from_list([#("wibble", "wobble")])
   let other_labels = dict.from_list([#("wii", "woo")])
   let assert Ok(_) =
-    counter.new("my_second_metric", "A counter Prometheus metric")
-  let assert Ok(_) =
-    counter.increment("my_second_metric", labels)
+    counter.increment("my_second_metric_total", labels)
   let assert Ok(_) =
     counter.increment_by(
-      "my_second_metric",
+      "my_second_metric_total",
       other_labels,
       number.decimal(1.2),
     )
@@ -141,6 +140,17 @@ my_third_metric_count{toto="titi"} 1
 Further documentation can be found at <https://hexdocs.pm/themis>.
 
 ## Usage
+
+### Metric naming
+
+Several rules apply to metric naming. For instance:
+- Counter metric names must end with `_total`
+- Suffixes `_sum`, `_count` and `_total` are reserved and cannot be used (except in the aforementionned case of counters with the `_total` suffix)
+- Must only contain alphanumerical characters (not case-sensitive) and "_"
+- Metrics prefixed with two underscores ("__") are reserved
+
+For more details please visit [the official Prometheus docs](https://prometheus.io/docs/practices/naming/)
+
 
 ### Working with Different Numeric Types
 
